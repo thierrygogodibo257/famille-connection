@@ -6,10 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SearchMembers } from '@/components/family/SearchMembers';
-import { FormHeader } from '@/components/shared/FormHeader';
 import { useToast } from '@/hooks/use-toast';
 import { api } from '@/services/api';
-import { Loader2, UserPlus } from 'lucide-react';
+import { Loader2, UserPlus, Users } from 'lucide-react';
 import { ROUTES } from '@/lib/constants/routes';
 
 interface Member {
@@ -61,6 +60,7 @@ const InvitePage = () => {
     setLoading(true);
     try {
       const profileData = {
+        id: crypto.randomUUID(),
         first_name: formData.firstName,
         last_name: formData.lastName,
         email: formData.email,
@@ -77,17 +77,13 @@ const InvitePage = () => {
         is_patriarch: false,
       };
 
-      const result = await api.createProfileDirect(profileData);
+      const result = await api.createProfile(profileData);
 
-      if (result.success) {
-        toast({
-          title: "Succès",
-          description: "Membre ajouté avec succès à la famille",
-        });
-        navigate(ROUTES.DASHBOARD.MEMBERS);
-      } else {
-        throw new Error(result.error || 'Erreur lors de la création du profil');
-      }
+      toast({
+        title: "Succès",
+        description: "Membre ajouté avec succès à la famille",
+      });
+      navigate(ROUTES.DASHBOARD.MEMBERS);
     } catch (error: any) {
       console.error('Erreur lors de l\'ajout du membre:', error);
       toast({
@@ -101,187 +97,230 @@ const InvitePage = () => {
   };
 
   return (
-    <div className="w-full max-w-md mx-auto p-6">
-      <FormHeader
-        title="Ajouter un membre"
-        subtitle="Ajoutez un nouveau membre à votre arbre familial"
-        icon={<UserPlus className="w-6 h-6" />}
-      />
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Titre */}
-        <div>
-          <Label htmlFor="title">Titre *</Label>
-          <Select value={formData.title} onValueChange={(value) => setFormData(prev => ({ ...prev, title: value }))}>
-            <SelectTrigger>
-              <SelectValue placeholder="Sélectionnez un titre" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="M.">M.</SelectItem>
-              <SelectItem value="Mme">Mme</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Prénom et Nom */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="firstName">Prénom *</Label>
-            <Input
-              id="firstName"
-              value={formData.firstName}
-              onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
-              placeholder="Prénom"
-              required
-            />
+    <div className="min-h-screen bg-gradient-to-br from-whatsapp-50 via-white to-whatsapp-100 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        {/* Header identique aux formulaires d'inscription */}
+        <div className="text-center mb-8 animate-fade-in">
+          <div className="mx-auto w-20 h-20 bg-gradient-to-br from-whatsapp-500 to-whatsapp-600 rounded-full flex items-center justify-center mb-6 shadow-lg animate-bounce-in">
+            <Users className="w-10 h-10 text-white" />
           </div>
-          <div>
-            <Label htmlFor="lastName">Nom *</Label>
-            <Input
-              id="lastName"
-              value={formData.lastName}
-              onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
-              placeholder="Nom de famille"
-              required
-            />
-          </div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Ajouter un membre
+          </h1>
+          <p className="text-gray-600">
+            Ajoutez un nouveau membre à votre arbre familial
+          </p>
         </div>
 
-        {/* Email */}
-        <div>
-          <Label htmlFor="email">Email *</Label>
-          <Input
-            id="email"
-            type="email"
-            value={formData.email}
-            onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-            placeholder="email@exemple.com"
-            required
-          />
-        </div>
+        {/* Formulaire avec le même style que l'inscription */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-white/20 animate-scale-in">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Titre */}
+            <div className="space-y-2">
+              <Label htmlFor="title" className="text-sm font-medium text-gray-700">
+                Titre *
+              </Label>
+              <Select value={formData.title} onValueChange={(value) => setFormData(prev => ({ ...prev, title: value }))}>
+                <SelectTrigger className="w-full bg-white/50">
+                  <SelectValue placeholder="Sélectionnez un titre" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="M.">M.</SelectItem>
+                  <SelectItem value="Mme">Mme</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-        {/* Téléphone */}
-        <div>
-          <Label htmlFor="phone">Téléphone</Label>
-          <Input
-            id="phone"
-            value={formData.phone}
-            onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-            placeholder="6 12 34 56 78"
-          />
-        </div>
+            {/* Prénom et Nom */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="firstName" className="text-sm font-medium text-gray-700">
+                  Prénom *
+                </Label>
+                <Input
+                  id="firstName"
+                  value={formData.firstName}
+                  onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
+                  placeholder="Prénom"
+                  className="bg-white/50"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName" className="text-sm font-medium text-gray-700">
+                  Nom *
+                </Label>
+                <Input
+                  id="lastName"
+                  value={formData.lastName}
+                  onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
+                  placeholder="Nom de famille"
+                  className="bg-white/50"
+                  required
+                />
+              </div>
+            </div>
 
-        {/* Relation familiale */}
-        <div>
-          <Label htmlFor="relationship">Relation familiale</Label>
-          <Select value={formData.relationship} onValueChange={(value) => setFormData(prev => ({ ...prev, relationship: value }))}>
-            <SelectTrigger>
-              <SelectValue placeholder="Sélectionnez la relation" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="fils">Fils</SelectItem>
-              <SelectItem value="fille">Fille</SelectItem>
-              <SelectItem value="père">Père</SelectItem>
-              <SelectItem value="mère">Mère</SelectItem>
-              <SelectItem value="époux">Époux</SelectItem>
-              <SelectItem value="épouse">Épouse</SelectItem>
-              <SelectItem value="cousin">Cousin</SelectItem>
-              <SelectItem value="cousine">Cousine</SelectItem>
-              <SelectItem value="oncle">Oncle</SelectItem>
-              <SelectItem value="tante">Tante</SelectItem>
-              <SelectItem value="neveu">Neveu</SelectItem>
-              <SelectItem value="nièce">Nièce</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+            {/* Email */}
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-sm font-medium text-gray-700">
+                Email *
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                placeholder="email@exemple.com"
+                className="bg-white/50"
+                required
+              />
+            </div>
 
-        {/* Recherche Père */}
-        <div>
-          <Label>Père (optionnel)</Label>
-          <SearchMembers
-            placeholder="Rechercher le père..."
-            onMemberSelect={handleFatherSelect}
-          />
-        </div>
+            {/* Téléphone */}
+            <div className="space-y-2">
+              <Label htmlFor="phone" className="text-sm font-medium text-gray-700">
+                Téléphone
+              </Label>
+              <Input
+                id="phone"
+                value={formData.phone}
+                onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                placeholder="6 12 34 56 78"
+                className="bg-white/50"
+              />
+            </div>
 
-        {/* Recherche Mère */}
-        <div>
-          <Label>Mère (optionnel)</Label>
-          <SearchMembers
-            placeholder="Rechercher la mère..."
-            onMemberSelect={handleMotherSelect}
-          />
-        </div>
+            {/* Relation familiale */}
+            <div className="space-y-2">
+              <Label htmlFor="relationship" className="text-sm font-medium text-gray-700">
+                Relation familiale
+              </Label>
+              <Select value={formData.relationship} onValueChange={(value) => setFormData(prev => ({ ...prev, relationship: value }))}>
+                <SelectTrigger className="bg-white/50">
+                  <SelectValue placeholder="Sélectionnez la relation" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="fils">Fils</SelectItem>
+                  <SelectItem value="fille">Fille</SelectItem>
+                  <SelectItem value="père">Père</SelectItem>
+                  <SelectItem value="mère">Mère</SelectItem>
+                  <SelectItem value="époux">Époux</SelectItem>
+                  <SelectItem value="épouse">Épouse</SelectItem>
+                  <SelectItem value="cousin">Cousin</SelectItem>
+                  <SelectItem value="cousine">Cousine</SelectItem>
+                  <SelectItem value="oncle">Oncle</SelectItem>
+                  <SelectItem value="tante">Tante</SelectItem>
+                  <SelectItem value="neveu">Neveu</SelectItem>
+                  <SelectItem value="nièce">Nièce</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-        {/* Date de naissance */}
-        <div>
-          <Label htmlFor="birthDate">Date de naissance</Label>
-          <Input
-            id="birthDate"
-            type="date"
-            value={formData.birthDate}
-            onChange={(e) => setFormData(prev => ({ ...prev, birthDate: e.target.value }))}
-          />
-        </div>
+            {/* Recherche Père */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-gray-700">
+                Père (optionnel)
+              </Label>
+              <SearchMembers
+                placeholder="Rechercher le père..."
+                onMemberSelect={handleFatherSelect}
+              />
+            </div>
 
-        {/* Lieu de naissance */}
-        <div>
-          <Label htmlFor="birthPlace">Lieu de naissance</Label>
-          <Input
-            id="birthPlace"
-            value={formData.birthPlace}
-            onChange={(e) => setFormData(prev => ({ ...prev, birthPlace: e.target.value }))}
-            placeholder="ex: Lyon, France"
-          />
-        </div>
+            {/* Recherche Mère */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-gray-700">
+                Mère (optionnel)
+              </Label>
+              <SearchMembers
+                placeholder="Rechercher la mère..."
+                onMemberSelect={handleMotherSelect}
+              />
+            </div>
 
-        {/* Localisation actuelle */}
-        <div>
-          <Label htmlFor="currentLocation">Localisation actuelle</Label>
-          <Input
-            id="currentLocation"
-            value={formData.currentLocation}
-            onChange={(e) => setFormData(prev => ({ ...prev, currentLocation: e.target.value }))}
-            placeholder="ex: Paris, France"
-          />
-        </div>
+            {/* Date de naissance */}
+            <div className="space-y-2">
+              <Label htmlFor="birthDate" className="text-sm font-medium text-gray-700">
+                Date de naissance
+              </Label>
+              <Input
+                id="birthDate"
+                type="date"
+                value={formData.birthDate}
+                onChange={(e) => setFormData(prev => ({ ...prev, birthDate: e.target.value }))}
+                className="bg-white/50"
+              />
+            </div>
 
-        {/* Situation */}
-        <div>
-          <Label htmlFor="situation">Situation</Label>
-          <Select value={formData.situation} onValueChange={(value) => setFormData(prev => ({ ...prev, situation: value }))}>
-            <SelectTrigger>
-              <SelectValue placeholder="Sélectionnez la situation" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Célibataire">Célibataire</SelectItem>
-              <SelectItem value="Marié(e)">Marié(e)</SelectItem>
-              <SelectItem value="Divorcé(e)">Divorcé(e)</SelectItem>
-              <SelectItem value="Veuf/Veuve">Veuf/Veuve</SelectItem>
-              <SelectItem value="En couple">En couple</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+            {/* Lieu de naissance */}
+            <div className="space-y-2">
+              <Label htmlFor="birthPlace" className="text-sm font-medium text-gray-700">
+                Lieu de naissance
+              </Label>
+              <Input
+                id="birthPlace"
+                value={formData.birthPlace}
+                onChange={(e) => setFormData(prev => ({ ...prev, birthPlace: e.target.value }))}
+                placeholder="ex: Lyon, France"
+                className="bg-white/50"
+              />
+            </div>
 
-        {/* Bouton de soumission */}
-        <Button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-gradient-to-r from-whatsapp-500 to-whatsapp-600 hover:from-whatsapp-600 hover:to-whatsapp-700"
-        >
-          {loading ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Ajout en cours...
-            </>
-          ) : (
-            <>
-              <UserPlus className="w-4 h-4 mr-2" />
-              Ajouter le membre
-            </>
-          )}
-        </Button>
-      </form>
+            {/* Localisation actuelle */}
+            <div className="space-y-2">
+              <Label htmlFor="currentLocation" className="text-sm font-medium text-gray-700">
+                Localisation actuelle
+              </Label>
+              <Input
+                id="currentLocation"
+                value={formData.currentLocation}
+                onChange={(e) => setFormData(prev => ({ ...prev, currentLocation: e.target.value }))}
+                placeholder="ex: Paris, France"
+                className="bg-white/50"
+              />
+            </div>
+
+            {/* Situation */}
+            <div className="space-y-2">
+              <Label htmlFor="situation" className="text-sm font-medium text-gray-700">
+                Situation
+              </Label>
+              <Select value={formData.situation} onValueChange={(value) => setFormData(prev => ({ ...prev, situation: value }))}>
+                <SelectTrigger className="bg-white/50">
+                  <SelectValue placeholder="Sélectionnez la situation" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Célibataire">Célibataire</SelectItem>
+                  <SelectItem value="Marié(e)">Marié(e)</SelectItem>
+                  <SelectItem value="Divorcé(e)">Divorcé(e)</SelectItem>
+                  <SelectItem value="Veuf/Veuve">Veuf/Veuve</SelectItem>
+                  <SelectItem value="En couple">En couple</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Bouton de soumission avec le même style */}
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-gradient-to-r from-whatsapp-500 to-whatsapp-600 hover:from-whatsapp-600 hover:to-whatsapp-700 text-white font-semibold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  Ajout en cours...
+                </>
+              ) : (
+                <>
+                  <UserPlus className="w-5 h-5 mr-2" />
+                  Ajouter le membre
+                </>
+              )}
+            </Button>
+          </form>
+        </div>
+      </div>
     </div>
   );
 };

@@ -28,7 +28,6 @@ export const Avatar = ({ src, alt, size = 'md', className, fallback }: AvatarPro
     xl: 'w-12 h-12'
   };
 
-  // Corriger l'URL de l'avatar Supabase si nécessaire
   const getImageUrl = (url?: string) => {
     if (!url) return null;
     
@@ -38,8 +37,13 @@ export const Avatar = ({ src, alt, size = 'md', className, fallback }: AvatarPro
     }
     
     // Si c'est un chemin relatif Supabase storage, construire l'URL complète
-    if (url.startsWith('avatars/')) {
+    if (url.includes('avatars/')) {
       return `https://rrlixvlwsaeaugudwbiw.supabase.co/storage/v1/object/public/${url}`;
+    }
+    
+    // Si c'est juste un nom de fichier, l'ajouter au bucket avatars
+    if (url && !url.includes('/')) {
+      return `https://rrlixvlwsaeaugudwbiw.supabase.co/storage/v1/object/public/avatars/${url}`;
     }
     
     return url;
@@ -59,6 +63,7 @@ export const Avatar = ({ src, alt, size = 'md', className, fallback }: AvatarPro
           alt={alt || 'Avatar'}
           className="w-full h-full object-cover"
           onError={() => setImageError(true)}
+          onLoad={() => console.log(`Avatar loaded: ${imageUrl}`)}
         />
       ) : fallback ? (
         <div className="flex items-center justify-center w-full h-full bg-gradient-to-br from-whatsapp-400 to-whatsapp-500 text-white font-semibold">
