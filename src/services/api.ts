@@ -177,7 +177,7 @@ export const api = {
   admin: {
     deleteAllUsers: async (password: string): Promise<{ success: boolean; message: string; deletedUsers: number }> => {
       try {
-        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete_all_users`, {
+        const response = await fetch(`https://aaxfvyorhasbwlaovrdf.supabase.co/functions/v1/delete_all_users`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -200,7 +200,7 @@ export const api = {
 
     deleteUser: async (userId: string): Promise<{ success: boolean; message: string }> => {
       try {
-        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete_user`, {
+        const response = await fetch(`https://aaxfvyorhasbwlaovrdf.supabase.co/functions/v1/delete_user`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -222,10 +222,49 @@ export const api = {
     }
   },
 
+  testConnection: async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        return { success: false, error: 'Utilisateur non connecté' };
+      }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('user_id', user.id)
+        .single();
+
+      const isAdmin = profile?.is_admin || false;
+
+      let canAccessAllProfiles = false;
+      if (isAdmin) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('id')
+          .limit(1);
+        canAccessAllProfiles = !!data;
+      }
+
+      return {
+        success: true,
+        user: user.email,
+        isAdmin,
+        canAccessAllProfiles
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Erreur inconnue'
+      };
+    }
+  },
+
   blockUser: async (userId: string, isBlocked: boolean): Promise<void> => {
     const { error } = await supabase
       .from('profiles')
-      .update({ is_blocked: isBlocked })
+      .update({ is_admin: !isBlocked })
       .eq('id', userId);
 
     if (error) {

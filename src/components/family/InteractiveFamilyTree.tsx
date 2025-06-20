@@ -1,3 +1,4 @@
+
 import { useCallback, useState } from 'react';
 import Tree from 'react-d3-tree';
 import { FamilyMember } from '@/types/family';
@@ -28,8 +29,12 @@ export const InteractiveFamilyTree = () => {
     const memberMap = new Map<string, FamilyMember>();
     members.forEach(member => memberMap.set(member.id, member));
 
-    // Trouver le patriarche (membre sans parent)
-    const patriarch = members.find(member => !member.parent_id);
+    // Trouver le patriarche (membre sans parent ou avec title patriarche)
+    const patriarch = members.find(member => 
+      (!member.father_id && !member.mother_id) || 
+      member.title?.toLowerCase().includes('patriarche') ||
+      member.is_patriarch
+    );
 
     if (!patriarch) {
       // Si pas de patriarche trouvé, prendre le premier membre
@@ -45,7 +50,7 @@ export const InteractiveFamilyTree = () => {
 
     // Chercher tous les membres qui ont ce membre comme parent
     memberMap.forEach(potentialChild => {
-      if (potentialChild.parent_id === member.id) {
+      if (potentialChild.father_id === member.id || potentialChild.mother_id === member.id) {
         children.push(buildNodeFromMember(potentialChild, memberMap));
       }
     });
@@ -53,8 +58,8 @@ export const InteractiveFamilyTree = () => {
     return {
       id: member.id,
       name: `${member.first_name} ${member.last_name}`,
-      title: member.title,
-      photoUrl: member.avatar_url,
+      title: member.title || 'Membre',
+      photoUrl: member.avatar_url || member.photo_url,
       attributes: {
         birthDate: member.birth_date,
         currentLocation: member.current_location,

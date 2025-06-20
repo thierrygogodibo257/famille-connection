@@ -22,6 +22,7 @@ export interface FamilyMember {
 }
 
 export interface ProfileData {
+  id?: string;
   first_name: string;
   last_name: string;
   email: string;
@@ -38,3 +39,31 @@ export interface ProfileData {
   is_admin?: boolean;
   is_patriarch?: boolean;
 }
+
+export type RelationshipType = 
+  | 'Père' 
+  | 'Mère' 
+  | 'Fils' 
+  | 'Fille' 
+  | 'Frère' 
+  | 'Sœur' 
+  | 'Grand-père' 
+  | 'Grand-mère' 
+  | 'Petit-fils' 
+  | 'Petite-fille'
+  | 'Oncle'
+  | 'Tante'
+  | 'Neveu'
+  | 'Nièce'
+  | 'Cousin'
+  | 'Cousine'
+  | 'Époux'
+  | 'Épouse'
+  | 'Gendre'
+  | 'Belle-fille'
+  | 'Beau-père'
+  | 'Belle-mère'
+  | 'Beau-frère'
+  | 'Belle-sœur';
+
+export type NewFamilyMember = Omit<FamilyMember, 'id' | 'created_at' | 'updated_at'>;

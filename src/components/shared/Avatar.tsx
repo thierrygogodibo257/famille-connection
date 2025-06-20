@@ -38,12 +38,12 @@ export const Avatar = ({ src, alt, size = 'md', className, fallback }: AvatarPro
     
     // Si c'est un chemin relatif Supabase storage, construire l'URL complète
     if (url.includes('avatars/')) {
-      return `https://rrlixvlwsaeaugudwbiw.supabase.co/storage/v1/object/public/${url}`;
+      return `https://aaxfvyorhasbwlaovrdf.supabase.co/storage/v1/object/public/${url}`;
     }
     
     // Si c'est juste un nom de fichier, l'ajouter au bucket avatars
     if (url && !url.includes('/')) {
-      return `https://rrlixvlwsaeaugudwbiw.supabase.co/storage/v1/object/public/avatars/${url}`;
+      return `https://aaxfvyorhasbwlaovrdf.supabase.co/storage/v1/object/public/avatars/${url}`;
     }
     
     return url;

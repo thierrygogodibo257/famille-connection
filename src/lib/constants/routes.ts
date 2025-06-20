@@ -1,12 +1,14 @@
 
 export const ROUTES = {
   ROOT: '/',
+  HOME: '/',
   AUTH: {
     LOGIN: '/auth/login',
     REGISTER: '/auth/register',
   },
   DASHBOARD: {
     ROOT: '/dashboard',
+    INDEX: '/dashboard',
     PROFILE: '/dashboard/profile',
     TREE: '/dashboard/tree',
     MEMBERS: '/dashboard/members',
