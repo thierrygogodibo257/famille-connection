@@ -1,5 +1,5 @@
 import { Calendar, MapPin, User } from 'lucide-react';
-import { Avatar } from '@/components/shared/Avatar';
+import { UserAvatar } from '@/components/shared/UserAvatar';
 import { FamilyMember } from '@/types/family';
 import { cn } from '@/lib/utils';
 import { DeleteUserButton } from './DeleteUserButton';
@@ -21,8 +21,13 @@ export const MemberCard = ({
   isAdmin = false,
   onDelete
 }: MemberCardProps) => {
-  const getInitials = (firstName: string, lastName: string) => {
-    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+  // Créer un objet utilisateur pour UserAvatar
+  const userData = {
+    avatar_url: member.avatar_url,
+    photo_url: member.photo_url,
+    first_name: member.first_name,
+    last_name: member.last_name,
+    email: member.email
   };
 
   if (variant === 'compact') {
@@ -36,10 +41,9 @@ export const MemberCard = ({
         onClick={onClick}
       >
         <div className="flex items-center space-x-3">
-          <Avatar
-            src={member.avatar_url}
+          <UserAvatar
+            user={userData}
             size="md"
-            fallback={getInitials(member.first_name, member.last_name)}
           />
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-gray-900 truncate">
@@ -84,10 +88,9 @@ export const MemberCard = ({
       )}
 
       <div className="flex flex-col items-center text-center space-y-4">
-        <Avatar
-          src={member.avatar_url}
+        <UserAvatar
+          user={userData}
           size="xl"
-          fallback={getInitials(member.first_name, member.last_name)}
           className="ring-4 ring-white/50"
         />
 

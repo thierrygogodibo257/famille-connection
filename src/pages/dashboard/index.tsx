@@ -4,7 +4,7 @@ import { Users, TreePine, Plus, Settings, User, Mail, Phone } from 'lucide-react
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
-import { Avatar } from '@/components/shared/Avatar';
+import { UserAvatar } from '@/components/shared/UserAvatar';
 import { ROUTES } from '@/lib/constants/routes';
 import { api } from '@/services/api';
 
@@ -24,6 +24,7 @@ const Dashboard = () => {
     activeBranches: 0
   });
   const [loading, setLoading] = useState(true);
+  const [userProfile, setUserProfile] = useState<any>(null);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -44,8 +45,31 @@ const Dashboard = () => {
       }
     };
 
+    const fetchUserProfile = async () => {
+      if (user) {
+        try {
+          const profile = await api.profiles.getCurrent();
+          setUserProfile(profile);
+        } catch (error) {
+          console.error('Erreur lors de la récupération du profil:', error);
+          // En cas d'erreur, utiliser les métadonnées utilisateur
+          setUserProfile({
+            first_name: user.user_metadata?.first_name,
+            last_name: user.user_metadata?.last_name,
+            avatar_url: user.user_metadata?.photo_url,
+            photo_url: user.user_metadata?.photo_url,
+            is_admin: user.user_metadata?.is_admin,
+            is_patriarch: user.user_metadata?.is_patriarch,
+            email: user.email,
+            phone: user.user_metadata?.phone
+          });
+        }
+      }
+    };
+
     fetchStats();
-  }, []);
+    fetchUserProfile();
+  }, [user]);
 
   const dashboardItems = [
     {
@@ -130,23 +154,23 @@ const Dashboard = () => {
           onClick={() => navigate(ROUTES.DASHBOARD.PROFILE)}
         >
           <div className="flex items-center space-x-4 mb-4">
-            <Avatar
-              src={user?.user_metadata?.photo_url}
-              fallback={user?.user_metadata?.first_name?.[0] || user?.email?.[0] || 'U'}
+            <UserAvatar
+              user={userProfile}
+              size="lg"
               className="w-30 h-30 ring-2 ring-purple-200"
             />
             <div className="flex-1">
               <h3 className="text-lg font-semibold text-gray-900">
-                {user?.user_metadata?.first_name} {user?.user_metadata?.last_name}
+                {userProfile?.first_name} {userProfile?.last_name}
               </h3>
               <p className="text-sm text-gray-600 flex items-center">
                 <Mail className="w-3 h-3 mr-1" />
-                {user?.email}
+                {userProfile?.email}
               </p>
-              {user?.user_metadata?.phone && (
+              {userProfile?.phone && (
                 <p className="text-sm text-gray-600 flex items-center">
                   <Phone className="w-3 h-3 mr-1" />
-                  {user.user_metadata.phone}
+                  {userProfile.phone}
                 </p>
               )}
             </div>
@@ -168,13 +192,13 @@ const Dashboard = () => {
 
           {/* Badge Patriarche ou Affiliation */}
           <div className="mt-2 flex items-center justify-center">
-            {user?.user_metadata?.is_patriarch ? (
+            {userProfile?.is_patriarch ? (
               <span className="px-4 py-1 rounded-full bg-gradient-to-r from-yellow-400 to-yellow-600 text-white font-bold shadow-lg text-md border-2 border-yellow-300 animate-bounce-in-3d">
                 Patriarche
               </span>
-            ) : user?.user_metadata?.relationship ? (
+            ) : userProfile?.relationship_type ? (
               <span className="px-3 py-1 rounded-full bg-gradient-to-r from-blue-400 to-blue-600 text-white font-semibold shadow text-sm border border-blue-300 animate-bounce-in-3d">
-                {user.user_metadata.relationship.charAt(0).toUpperCase() + user.user_metadata.relationship.slice(1)}
+                {userProfile.relationship_type.charAt(0).toUpperCase() + userProfile.relationship_type.slice(1)}
               </span>
             ) : null}
           </div>
@@ -200,7 +224,7 @@ const Dashboard = () => {
             inviteCard.color,
             hoveredCard === inviteCard.id && 'animate-bounce'
           )}>
-            {inviteCard.icon && <inviteCard.icon className="w-6 h-6 text-white" />}
+            <Plus className="w-6 h-6 text-white" />
           </div>
           <h3 className="text-xl font-semibold text-gray-900 mb-2">
             {inviteCard.title}
@@ -211,50 +235,29 @@ const Dashboard = () => {
         </Card>
       </div>
 
-      {/* Stats Section */}
+      {/* Section Statistiques */}
       <div className="mt-12">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Statistiques</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">
+          Statistiques de la Famille
+        </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="p-6 glass-effect">
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                <Users className="w-6 h-6 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Total des membres</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {loading ? '...' : stats.totalMembers}
-                </p>
-              </div>
+          <Card className="p-6 text-center">
+            <div className="text-3xl font-bold text-whatsapp-600 mb-2">
+              {loading ? '...' : stats.totalMembers}
             </div>
+            <div className="text-gray-600">Membres Totaux</div>
           </Card>
-
-          <Card className="p-6 glass-effect">
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                <TreePine className="w-6 h-6 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Générations</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {loading ? '...' : stats.generations}
-                </p>
-              </div>
+          <Card className="p-6 text-center">
+            <div className="text-3xl font-bold text-blue-600 mb-2">
+              {loading ? '...' : stats.generations}
             </div>
+            <div className="text-gray-600">Générations</div>
           </Card>
-
-          <Card className="p-6 glass-effect">
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                <Users className="w-6 h-6 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Branches actives</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {loading ? '...' : stats.activeBranches}
-                </p>
-              </div>
+          <Card className="p-6 text-center">
+            <div className="text-3xl font-bold text-emerald-600 mb-2">
+              {loading ? '...' : stats.activeBranches}
             </div>
+            <div className="text-gray-600">Branches Actives</div>
           </Card>
         </div>
       </div>

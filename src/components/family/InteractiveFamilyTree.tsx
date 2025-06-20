@@ -4,12 +4,18 @@ import Tree from 'react-d3-tree';
 import { FamilyMember } from '@/types/family';
 import { useFamilyMembers } from '@/hooks/useFamilyMembers';
 import { Loader2, Calendar, MapPin } from 'lucide-react';
+import { UserAvatar } from '@/components/shared/UserAvatar';
 
 interface TreeNode {
   id: string;
   name: string;
   title: string;
   photoUrl?: string;
+  avatar_url?: string;
+  photo_url?: string;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
   attributes?: {
     birthDate?: string;
     currentLocation?: string;
@@ -30,8 +36,8 @@ export const InteractiveFamilyTree = () => {
     members.forEach(member => memberMap.set(member.id, member));
 
     // Trouver le patriarche (membre sans parent ou avec title patriarche)
-    const patriarch = members.find(member => 
-      (!member.father_id && !member.mother_id) || 
+    const patriarch = members.find(member =>
+      (!member.father_id && !member.mother_id) ||
       member.title?.toLowerCase().includes('patriarche') ||
       member.is_patriarch
     );
@@ -60,6 +66,11 @@ export const InteractiveFamilyTree = () => {
       name: `${member.first_name} ${member.last_name}`,
       title: member.title || 'Membre',
       photoUrl: member.avatar_url || member.photo_url,
+      avatar_url: member.avatar_url,
+      photo_url: member.photo_url,
+      first_name: member.first_name,
+      last_name: member.last_name,
+      email: member.email,
       attributes: {
         birthDate: member.birth_date,
         currentLocation: member.current_location,
@@ -69,44 +80,55 @@ export const InteractiveFamilyTree = () => {
     };
   };
 
-  const renderCustomNodeElement = useCallback(({ nodeDatum, toggleNode }: any) => (
-    <g>
-      <foreignObject width="280" height="200" x="-140" y="-100">
-        <div className="relative w-64 p-4 rounded-xl glass-effect cursor-pointer transition-all duration-300 hover-lift animate-fade-in">
-          <div className="flex flex-col items-center text-center space-y-3">
-            <div className="relative rounded-full overflow-hidden bg-gradient-to-br from-whatsapp-100 to-whatsapp-200 flex items-center justify-center border-2 border-white shadow-md w-16 h-16 ring-4 ring-white/50">
-              <div className="flex items-center justify-center w-full h-full bg-gradient-to-br from-whatsapp-400 to-whatsapp-500 text-white font-semibold">
-                {nodeDatum.name.split(' ').map((n: string) => n[0]).join('')}
+  const renderCustomNodeElement = useCallback(({ nodeDatum, toggleNode }: any) => {
+    // Créer un objet utilisateur pour UserAvatar
+    const userData = {
+      avatar_url: nodeDatum.avatar_url || nodeDatum.photoUrl,
+      photo_url: nodeDatum.photo_url || nodeDatum.photoUrl,
+      first_name: nodeDatum.first_name || nodeDatum.name.split(' ')[0],
+      last_name: nodeDatum.last_name || nodeDatum.name.split(' ').slice(1).join(' '),
+      email: nodeDatum.email || ''
+    };
+
+    return (
+      <g>
+        <foreignObject width="280" height="200" x="-140" y="-100">
+          <div className="relative w-64 p-4 rounded-xl glass-effect cursor-pointer transition-all duration-300 hover-lift animate-fade-in">
+            <div className="flex flex-col items-center text-center space-y-3">
+              <UserAvatar
+                user={userData}
+                size="lg"
+                className="ring-4 ring-white/50"
+              />
+              <div className="space-y-1">
+                <h3 className="text-lg font-bold text-gray-900">{nodeDatum.name}</h3>
+                <p className="text-whatsapp-600 font-medium text-sm">{nodeDatum.title}</p>
+                {nodeDatum.attributes?.situation && (
+                  <p className="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded-full">
+                    {nodeDatum.attributes.situation}
+                  </p>
+                )}
+              </div>
+              <div className="w-full space-y-2 text-xs">
+                {nodeDatum.attributes?.birthDate && (
+                  <div className="flex items-center justify-center space-x-1 text-gray-600">
+                    <Calendar className="w-3 h-3" />
+                    <span>{nodeDatum.attributes.birthDate}</span>
+                  </div>
+                )}
+                {nodeDatum.attributes?.currentLocation && (
+                  <div className="flex items-center justify-center space-x-1 text-gray-600">
+                    <MapPin className="w-3 h-3" />
+                    <span>{nodeDatum.attributes.currentLocation}</span>
+                  </div>
+                )}
               </div>
             </div>
-            <div className="space-y-1">
-              <h3 className="text-lg font-bold text-gray-900">{nodeDatum.name}</h3>
-              <p className="text-whatsapp-600 font-medium text-sm">{nodeDatum.title}</p>
-              {nodeDatum.attributes?.situation && (
-                <p className="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded-full">
-                  {nodeDatum.attributes.situation}
-                </p>
-              )}
-            </div>
-            <div className="w-full space-y-2 text-xs">
-              {nodeDatum.attributes?.birthDate && (
-                <div className="flex items-center justify-center space-x-1 text-gray-600">
-                  <Calendar className="w-3 h-3" />
-                  <span>{nodeDatum.attributes.birthDate}</span>
-                </div>
-              )}
-              {nodeDatum.attributes?.currentLocation && (
-                <div className="flex items-center justify-center space-x-1 text-gray-600">
-                  <MapPin className="w-3 h-3" />
-                  <span>{nodeDatum.attributes.currentLocation}</span>
-                </div>
-              )}
-            </div>
           </div>
-        </div>
-      </foreignObject>
-    </g>
-  ), []);
+        </foreignObject>
+      </g>
+    );
+  }, []);
 
   console.log('[InteractiveFamilyTree] members:', members);
   const treeData = buildTree(members);

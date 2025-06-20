@@ -224,7 +224,7 @@ export const api = {
   testConnection: async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       if (!user) {
         return { success: false, error: 'Utilisateur non connecté' };
       }
@@ -261,19 +261,16 @@ export const api = {
   },
 
   blockUser: async (userId: string, isBlocked: boolean): Promise<void> => {
-<<<<<<< HEAD
     // NOTE: La colonne `is_blocked` n'existe pas dans le schéma `profiles`.
     // La fonctionnalité est désactivée en attendant une migration de la base de données.
     // const { error } = await supabase
     //   .from('profiles')
     //   .update({ is_blocked: isBlocked })
     //   .eq('id', userId);
-=======
     const { error } = await supabase
       .from('profiles')
       .update({ is_admin: !isBlocked })
       .eq('id', userId);
->>>>>>> a3eaafc4c312991cc6d24df804d6d129625ca5e8
 
     // if (error) {
     //   throw new Error(`Erreur lors du ${isBlocked ? 'blocage' : 'déblocage'} de l'utilisateur: ${error.message}`);

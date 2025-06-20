@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { Avatar } from '@/components/shared/Avatar';
+import { UserAvatar } from '@/components/shared/UserAvatar';
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/lib/constants/routes';
-import { Menu, X, Facebook, Twitter, Instagram, Linkedin, MessageCircle, Star, Settings, UserPlus, Flag, MessageSquare, LogOut, TreePine, Users, Shield } from 'lucide-react';
+import { Menu, X, Facebook, Twitter, Instagram, Linkedin, MessageCircle, Star, Settings, UserPlus, Flag, MessageSquare, LogOut, TreePine, Users, Shield, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { api } from '@/services/api';
@@ -22,6 +22,7 @@ const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLogoHovered, setIsLogoHovered] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [userProfile, setUserProfile] = useState<any>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const { user, signOut } = useAuth();
   const location = useLocation();
@@ -31,6 +32,31 @@ const Header = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteCode, setDeleteCode] = useState('');
   const [deleteCodeError, setDeleteCodeError] = useState('');
+
+  // Récupérer le profil complet de l'utilisateur
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (user) {
+        try {
+          const profile = await api.profiles.getCurrent();
+          setUserProfile(profile);
+        } catch (error) {
+          console.error('Erreur lors de la récupération du profil:', error);
+          // En cas d'erreur, utiliser les métadonnées utilisateur
+          setUserProfile({
+            first_name: user.user_metadata?.first_name,
+            last_name: user.user_metadata?.last_name,
+            avatar_url: user.user_metadata?.photo_url,
+            photo_url: user.user_metadata?.photo_url,
+            is_admin: user.user_metadata?.is_admin,
+            is_patriarch: user.user_metadata?.is_patriarch
+          });
+        }
+      }
+    };
+
+    fetchUserProfile();
+  }, [user]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -112,6 +138,20 @@ const Header = () => {
       setDeleteCode('');
     }
   };
+
+  // Obtenir le nom complet de l'utilisateur
+  const getUserFullName = () => {
+    if (userProfile?.first_name && userProfile?.last_name) {
+      return `${userProfile.first_name} ${userProfile.last_name}`;
+    }
+    if (user?.user_metadata?.first_name && user?.user_metadata?.last_name) {
+      return `${user.user_metadata.first_name} ${user.user_metadata.last_name}`;
+    }
+    return user?.email || 'Utilisateur';
+  };
+
+  // Vérifier si l'utilisateur est admin
+  const isUserAdmin = userProfile?.is_admin || user?.user_metadata?.is_admin || false;
 
   return (
     <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
@@ -309,18 +349,19 @@ const Header = () => {
                     aria-haspopup="true"
                     aria-expanded={isUserMenuOpen}
                   >
-                    <Avatar
-                      src={user.user_metadata?.photo_url}
-                      fallback={user.user_metadata?.first_name?.[0] || 'U'}
+                    <UserAvatar
+                      user={userProfile}
+                      size="md"
                       className="user-avatar ring-2 ring-white/20"
+                      showStatus={true}
+                      isOnline={true}
                     />
-                    <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-400 rounded-full border-2 border-white animate-pulse" />
                   </button>
                 </motion.div>
                 {isUserMenuOpen && (
                   <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg py-1 z-50">
                     <div className="px-4 py-2 border-b">
-                      <p className="user-name font-medium">{user.user_metadata?.first_name} {user.user_metadata?.last_name}</p>
+                      <p className="user-name font-medium">{getUserFullName()}</p>
                       <p className="user-status-text text-sm text-gray-500">En ligne</p>
                     </div>
                     <div className="py-1">
@@ -356,7 +397,7 @@ const Header = () => {
                         <MessageCircle className="w-4 h-4 mr-2" />
                         Initier un chat
                       </Link>
-                      {user.user_metadata?.is_admin && (
+                      {isUserAdmin && (
                         <Link
                           to={ROUTES.DASHBOARD.SETTINGS}
                           className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
@@ -366,7 +407,7 @@ const Header = () => {
                           Paramètres
                         </Link>
                       )}
-                      {user.user_metadata?.is_admin && (
+                      {isUserAdmin && (
                         <Link
                           to={ROUTES.DASHBOARD.ADMIN}
                           className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
@@ -387,7 +428,7 @@ const Header = () => {
                         Se déconnecter
                       </button>
                       {/* Afficher le bouton Delete All seulement pour les admins */}
-                      {user.user_metadata?.is_admin && (
+                      {isUserAdmin && (
                         <button
                           onClick={() => {
                             setShowDeleteDialog(true);
@@ -477,7 +518,7 @@ const Header = () => {
               >
                 Initier un chat
               </Link>
-              {user.user_metadata?.is_admin && (
+              {isUserAdmin && (
                 <Link
                   to={ROUTES.DASHBOARD.SETTINGS}
                   className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
@@ -486,7 +527,7 @@ const Header = () => {
                   Paramètres
                 </Link>
               )}
-              {user.user_metadata?.is_admin && (
+              {isUserAdmin && (
                 <Link
                   to={ROUTES.DASHBOARD.ADMIN}
                   className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
@@ -541,7 +582,14 @@ const Header = () => {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowDeleteDialog(false)} disabled={isDeleting}>Annuler</Button>
             <Button variant="destructive" onClick={handleDeleteAll} disabled={isDeleting || deleteCode.length === 0}>
-              {isDeleting ? 'Suppression...' : 'Confirmer'}
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Suppression...
+                </>
+              ) : (
+                'Supprimer tout'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

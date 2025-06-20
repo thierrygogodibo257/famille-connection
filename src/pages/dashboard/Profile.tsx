@@ -6,12 +6,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Avatar } from '@/components/shared/Avatar';
+import { UserAvatar } from '@/components/shared/UserAvatar';
 import { Camera, Loader2, Save, Edit, X } from 'lucide-react';
 import { ROUTES } from '@/lib/constants/routes';
 import { useToast } from '@/hooks/use-toast';
 import { FormHeader } from '@/components/shared/FormHeader';
 import { supabase } from '@/integrations/supabase/client';
+import { api } from '@/services/api';
 
 interface ProfileData {
   id: string;
@@ -26,6 +27,7 @@ interface ProfileData {
   role?: string;
   biography?: string;
   photo_url?: string;
+  avatar_url?: string;
   title?: string;
   is_admin?: boolean;
   is_patriarch?: boolean;
@@ -50,9 +52,17 @@ const ProfilePage = () => {
       return;
     }
 
-    // Créer le profil à partir des métadonnées utilisateur
-    const createProfileFromMetadata = () => {
+    const fetchProfile = async () => {
       try {
+        setLoading(true);
+        const userProfile = await api.profiles.getCurrent();
+        setProfile(userProfile);
+        setFormData(userProfile);
+        setProfilePhoto(userProfile.avatar_url || userProfile.photo_url || '');
+        setLoading(false);
+      } catch (error) {
+        console.error('Erreur lors de la récupération du profil:', error);
+        // En cas d'erreur, créer le profil à partir des métadonnées utilisateur
         const metadata = user.user_metadata;
         const profileData: ProfileData = {
           id: user.id,
@@ -66,6 +76,7 @@ const ProfilePage = () => {
           situation: metadata.situation || '',
           role: metadata.profession || '',
           photo_url: metadata.photo_url || '',
+          avatar_url: metadata.photo_url || '',
           title: metadata.title || 'Membre',
           is_admin: metadata.is_admin || false,
           is_patriarch: metadata.is_patriarch || false,
@@ -77,14 +88,10 @@ const ProfilePage = () => {
         setFormData(profileData);
         setProfilePhoto(metadata.photo_url || '');
         setLoading(false);
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Une erreur est survenue';
-        setError(message);
-        setLoading(false);
       }
     };
 
-    createProfileFromMetadata();
+    fetchProfile();
   }, [user, navigate]);
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -94,7 +101,7 @@ const ProfilePage = () => {
       reader.onload = (event) => {
         const result = event.target?.result as string;
         setProfilePhoto(result);
-        setFormData({ ...formData, photo_url: result });
+        setFormData({ ...formData, avatar_url: result, photo_url: result });
       };
       reader.readAsDataURL(file);
     }
@@ -108,6 +115,12 @@ const ProfilePage = () => {
       setLoading(true);
       setError(null);
 
+      // Mettre à jour le profil dans la base de données
+      const updatedProfile = await api.profiles.update(profile.id, {
+        ...formData,
+        updated_at: new Date().toISOString(),
+      });
+
       // Mettre à jour les métadonnées utilisateur
       const { error: updateError } = await supabase.auth.updateUser({
         data: {
@@ -120,7 +133,7 @@ const ProfilePage = () => {
           current_location: formData.current_location,
           situation: formData.situation,
           profession: formData.role,
-          photo_url: formData.photo_url,
+          photo_url: formData.avatar_url || formData.photo_url,
           updated_at: new Date().toISOString(),
         }
       });
@@ -130,7 +143,6 @@ const ProfilePage = () => {
       }
 
       // Mettre à jour l'état local
-      const updatedProfile = { ...profile, ...formData };
       setProfile(updatedProfile);
       setIsEditing(false);
 
@@ -190,10 +202,10 @@ const ProfilePage = () => {
           <div className="text-center">
             <div className="flex justify-center mb-2">
               <div className="relative">
-                <Avatar
-                  src={profilePhoto || profile.photo_url}
-                  size="lg"
-                  fallback={profile.first_name ? profile.first_name[0].toUpperCase() : '?'}
+                <UserAvatar
+                  user={profile}
+                  size="xl"
+                  className="w-32 h-32"
                 />
                 {isEditing && (
                   <label className="absolute bottom-0 right-0 w-6 h-6 bg-whatsapp-500 rounded-full flex items-center justify-center cursor-pointer hover:bg-whatsapp-600 transition-colors">
@@ -208,49 +220,45 @@ const ProfilePage = () => {
                 )}
               </div>
             </div>
-            <p className="text-xs text-gray-500">
-              {isEditing ? 'Cliquez sur l\'icône pour changer la photo' : 'Photo de profil'}
-            </p>
+            {isEditing && (
+              <p className="text-xs text-gray-500">
+                Cliquez sur l'icône caméra pour changer votre photo
+              </p>
+            )}
           </div>
 
-          {/* Nom et Prénom */}
+          {/* Informations de base */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="first_name">Prénom *</Label>
+              <Label htmlFor="first_name">Prénom</Label>
               <Input
                 id="first_name"
                 value={formData.first_name || ''}
                 onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
                 disabled={!isEditing}
-                placeholder="Prénom"
               />
             </div>
             <div>
-              <Label htmlFor="last_name">Nom *</Label>
+              <Label htmlFor="last_name">Nom</Label>
               <Input
                 id="last_name"
                 value={formData.last_name || ''}
                 onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
                 disabled={!isEditing}
-                placeholder="Nom de famille"
               />
             </div>
           </div>
 
-          {/* Email */}
           <div>
-            <Label htmlFor="email">Email *</Label>
+            <Label htmlFor="email">Email</Label>
             <Input
               id="email"
-              type="email"
               value={formData.email || ''}
               disabled
-              className="bg-gray-50"
-              placeholder="votre@email.com"
+              className="bg-gray-100"
             />
           </div>
 
-          {/* Téléphone */}
           <div>
             <Label htmlFor="phone">Téléphone</Label>
             <Input
@@ -258,11 +266,10 @@ const ProfilePage = () => {
               value={formData.phone || ''}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
               disabled={!isEditing}
-              placeholder="6 12 34 56 78"
             />
           </div>
 
-          {/* Date de naissance */}
+          {/* Informations personnelles */}
           <div>
             <Label htmlFor="birth_date">Date de naissance</Label>
             <Input
@@ -274,7 +281,6 @@ const ProfilePage = () => {
             />
           </div>
 
-          {/* Lieu de naissance */}
           <div>
             <Label htmlFor="birth_place">Lieu de naissance</Label>
             <Input
@@ -282,25 +288,21 @@ const ProfilePage = () => {
               value={formData.birth_place || ''}
               onChange={(e) => setFormData({ ...formData, birth_place: e.target.value })}
               disabled={!isEditing}
-              placeholder="ex: Lyon, France"
             />
           </div>
 
-          {/* Localisation actuelle */}
           <div>
-            <Label htmlFor="current_location">Localisation actuelle</Label>
+            <Label htmlFor="current_location">Lieu de résidence</Label>
             <Input
               id="current_location"
               value={formData.current_location || ''}
               onChange={(e) => setFormData({ ...formData, current_location: e.target.value })}
               disabled={!isEditing}
-              placeholder="ex: Paris, France"
             />
           </div>
 
-          {/* Situation */}
           <div>
-            <Label htmlFor="situation">Situation</Label>
+            <Label htmlFor="situation">Situation familiale</Label>
             <Select
               value={formData.situation || ''}
               onValueChange={(value) => setFormData({ ...formData, situation: value })}
@@ -310,65 +312,68 @@ const ProfilePage = () => {
                 <SelectValue placeholder="Sélectionnez votre situation" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Célibataire">Célibataire</SelectItem>
-                <SelectItem value="Marié(e)">Marié(e)</SelectItem>
-                <SelectItem value="Divorcé(e)">Divorcé(e)</SelectItem>
-                <SelectItem value="Veuf/Veuve">Veuf/Veuve</SelectItem>
-                <SelectItem value="En couple">En couple</SelectItem>
+                <SelectItem value="célibataire">Célibataire</SelectItem>
+                <SelectItem value="marié">Marié</SelectItem>
+                <SelectItem value="divorcé">Divorcé</SelectItem>
+                <SelectItem value="veuf">Veuf</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          {/* Rôle */}
           <div>
-            <Label htmlFor="role">Rôle</Label>
+            <Label htmlFor="role">Profession</Label>
             <Input
               id="role"
               value={formData.role || ''}
               onChange={(e) => setFormData({ ...formData, role: e.target.value })}
               disabled={!isEditing}
-              placeholder="ex: Médecin, Retraité, Étudiant..."
             />
           </div>
 
-          {/* Boutons d'action */}
-          <div className="flex justify-end space-x-4 pt-4">
+          <div>
+            <Label htmlFor="biography">Biographie</Label>
+            <Textarea
+              id="biography"
+              value={formData.biography || ''}
+              onChange={(e) => setFormData({ ...formData, biography: e.target.value })}
+              disabled={!isEditing}
+              rows={3}
+            />
+          </div>
+
+          {/* Actions */}
+          <div className="flex space-x-2 pt-4">
             {isEditing ? (
               <>
+                <Button type="submit" disabled={loading} className="flex-1">
+                  {loading ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4 mr-2" />
+                  )}
+                  Sauvegarder
+                </Button>
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => {
                     setIsEditing(false);
                     setFormData(profile);
-                    setProfilePhoto(profile.photo_url || '');
+                    setProfilePhoto(profile.avatar_url || profile.photo_url || '');
                   }}
-                  className="flex items-center space-x-2"
                 >
-                  <X className="w-4 h-4" />
-                  <span>Annuler</span>
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={loading}
-                  className="bg-gradient-to-r from-whatsapp-500 to-whatsapp-600 hover:from-whatsapp-600 hover:to-whatsapp-700 flex items-center space-x-2"
-                >
-                  {loading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Save className="w-4 h-4" />
-                  )}
-                  <span>Enregistrer</span>
+                  <X className="w-4 h-4 mr-2" />
+                  Annuler
                 </Button>
               </>
             ) : (
               <Button
                 type="button"
                 onClick={() => setIsEditing(true)}
-                className="bg-gradient-to-r from-whatsapp-500 to-whatsapp-600 hover:from-whatsapp-600 hover:to-whatsapp-700 flex items-center space-x-2"
+                className="flex-1"
               >
-                <Edit className="w-4 h-4" />
-                <span>Modifier</span>
+                <Edit className="w-4 h-4 mr-2" />
+                Modifier
               </Button>
             )}
           </div>
