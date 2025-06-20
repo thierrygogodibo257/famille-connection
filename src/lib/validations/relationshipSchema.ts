@@ -9,7 +9,7 @@ export const RelationshipEnum = z.enum([
   'petit-fils', 'petite-fille',
   'grand-père', 'grande-mère',
   'époux', 'épouse',
-  'patriarche',
+  'patriarche', 'matriarche',
 ]);
 
 export const ProfileSchema = z.object({
@@ -42,9 +42,9 @@ export const FamilyRegisterSchema = z.object({
   birthPlace: z.string().optional(),
   photoUrl: z.string().optional(),
   relationship: RelationshipEnum,
-  spouseId: z.string().optional(),
-  fatherId: z.string().optional(),
-  motherId: z.string().optional(),
+  spouseName: z.string().optional(),
+  fatherName: z.string().optional(),
+  motherName: z.string().optional(),
   birthDate: z.string().optional(),
 });
 

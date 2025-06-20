@@ -21,7 +21,7 @@ CREATE TYPE relationship_type AS ENUM (
     'fils', 'fille', 'père', 'mère', 'cousin', 'cousine',
     'tante', 'oncle', 'neveu', 'nièce', 'petit-fils',
     'petite-fille', 'grand-père', 'grande-mère', 'époux',
-    'épouse', 'patriarche'
+    'épouse', 'patriarche', 'matriarche'
 );
 
 -- 3. CRÉER LES TABLES

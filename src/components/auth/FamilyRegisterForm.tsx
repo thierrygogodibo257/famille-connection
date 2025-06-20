@@ -8,23 +8,19 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar } from '@/components/shared/Avatar';
-import { Camera, Eye, EyeOff, ThumbsUp, Loader2 } from 'lucide-react';
+import { Camera, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { ProfileData } from '@/types/profile';
 import { api } from '@/services/api';
 import { ComboboxMembre } from '@/components/family/ComboboxMembre';
 import { FamilyRegisterSchema, FamilyRegisterData, RelationshipType } from '@/lib/validations/relationshipSchema';
-import { relationshipTypeOptions } from '@/lib/constants/relationshipTypeOptions';
-
-// Relations qui nécessitent des informations supplémentaires
-const RELATIONS_REQUIRING_INFO = ['époux', 'épouse', 'fils', 'fille'] as const;
+import { getRelationshipTypeOptions } from '@/lib/constants/relationshipTypeOptions';
 
 export const FamilyRegisterForm = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [profilePhoto, setProfilePhoto] = useState<string>('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
   const navigate = useNavigate();
   const { toast } = useToast();
   const [role, setRole] = useState<'Membre' | 'Administrateur'>('Membre');
@@ -48,49 +44,38 @@ export const FamilyRegisterForm = () => {
       birthPlace: '',
       photoUrl: '',
       relationship: 'fils',
-      spouseId: '',
-      fatherId: '',
-      motherId: '',
+      spouseName: '',
+      fatherName: '',
+      motherName: '',
       birthDate: '',
     }
   });
 
-  const fetchAllMembers = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, first_name, last_name, title, relationship_type')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      const mappedResults = data?.map(member => ({
-        value: member.id,
-        label: `${member.first_name} ${member.last_name} (${member.title})`,
-        relationship: member.relationship_type
-      })) || [];
-
-      setSearchResults(mappedResults);
-    } catch (err) {
-      console.error('Erreur lors du chargement des membres:', err);
-      toast({
-        title: "Erreur de chargement",
-        description: "Impossible de charger la liste des membres",
-        variant: "destructive",
-      });
-    }
-  };
+  const watchedTitle = methods.watch('title');
+  const relationshipOptions = getRelationshipTypeOptions(watchedTitle, patriarchExists);
 
   useEffect(() => {
-    // Vérifie s'il existe déjà un patriarche dans la table profiles
-    (async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('is_patriarch', true)
-        .limit(1);
-      setPatriarchExists(!!(data && data.length > 0));
-    })();
+    // Vérifie s'il existe déjà un patriarche/matriarche dans la table profiles
+    const checkPatriarchExists = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, title')
+          .or('title.eq.Patriarche,title.eq.Matriarche')
+          .limit(1);
+
+        if (error) {
+          console.error('Erreur lors de la vérification du patriarche:', error);
+          return;
+        }
+
+        setPatriarchExists(!!(data && data.length > 0));
+      } catch (err) {
+        console.error('Erreur lors de la vérification du patriarche:', err);
+      }
+    };
+
+    checkPatriarchExists();
   }, []);
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -106,43 +91,6 @@ export const FamilyRegisterForm = () => {
     }
   };
 
-  const searchFamilyMembers = async (query: string) => {
-    if (!query || query.length < 2) {
-      console.log('Query trop courte:', query);
-      setSearchResults([]);
-      return;
-    }
-
-    try {
-      console.log('Début recherche avec query:', query);
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, first_name, last_name, title')
-        .or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%`)
-        .limit(5);
-
-      if (error) {
-        console.error('Erreur Supabase:', error);
-        throw error;
-      }
-
-      console.log('Résultats bruts:', data);
-      const mappedResults = data?.map(member => ({
-        value: member.id,
-        label: `${member.first_name} ${member.last_name} (${member.title})`
-      })) || [];
-      console.log('Résultats mappés:', mappedResults);
-      setSearchResults(mappedResults);
-    } catch (err) {
-      console.error('Erreur détaillée:', err);
-      toast({
-        title: "Erreur de recherche",
-        description: "Impossible de rechercher les membres",
-        variant: "destructive",
-      });
-    }
-  };
-
   const handleRoleChange = (value: 'Membre' | 'Administrateur') => {
     setRole(value);
     if (value === 'Administrateur') {
@@ -151,6 +99,7 @@ export const FamilyRegisterForm = () => {
       setIsAdmin(false);
     }
   };
+
   const onSubmit = async (data: FamilyRegisterData) => {
     setIsLoading(true);
 
@@ -166,7 +115,7 @@ export const FamilyRegisterForm = () => {
         return;
       }
 
-      // Vérifier si l'email existe déjà d'une manière plus appropriée
+      // Vérifier si l'email existe déjà
       const { data: userExists, error: userCheckError } = await supabase
         .from('profiles')
         .select('id')
@@ -196,17 +145,6 @@ export const FamilyRegisterForm = () => {
         return;
       }
 
-      // Vérifier si un membre lié est requis mais non fourni
-      if (RELATIONS_REQUIRING_INFO.includes(data.relationship as any) && !data.spouseId && !data.fatherId && !data.motherId) {
-        toast({
-          title: "Informations supplémentaires requises",
-          description: `Veuillez fournir les informations nécessaires pour la relation ${data.relationship === 'époux' ? 'conjugalité' : 'parentale'}`,
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
-      }
-
       // 1. Créer le compte utilisateur
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
@@ -222,13 +160,12 @@ export const FamilyRegisterForm = () => {
             birth_place: data.birthPlace || '',
             photo_url: '',
             relationship_type: data.relationship as RelationshipType,
-            father_name: data.fatherId || '',
-            mother_name: data.motherId || '',
+            father_name: data.fatherName || '',
+            mother_name: data.motherName || '',
             is_admin: isAdmin,
             birth_date: data.birthDate || null,
-            title: data.title === 'Mme' ? 'Fille' : 'Fils',
             situation: '',
-            is_patriarch: data.relationship === 'patriarche',
+            is_patriarch: data.relationship === 'patriarche' || data.relationship === 'matriarche',
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           }
@@ -257,9 +194,6 @@ export const FamilyRegisterForm = () => {
         throw signInError;
       }
 
-      const accessToken = signInData.session?.access_token;
-      if (!accessToken) throw new Error('Token JWT manquant après connexion.');
-
       // 3. Upload avatar si besoin
       let avatarUrl = '';
       if (data.photoUrl && data.photoUrl.startsWith('data:')) {
@@ -274,7 +208,15 @@ export const FamilyRegisterForm = () => {
         }
       }
 
-      // 4. Créer le profil dans la table via edge function
+      // 4. Déterminer le titre approprié
+      let profileTitle: string;
+      if (data.relationship === 'patriarche' || data.relationship === 'matriarche') {
+        profileTitle = data.relationship === 'patriarche' ? 'Patriarche' : 'Matriarche';
+      } else {
+        profileTitle = data.title === 'Mme' ? 'Fille' : 'Fils';
+      }
+
+      // 5. Créer le profil dans la table
       const profileData: ProfileData = {
         id: signInData.user.id,
         user_id: signInData.user.id,
@@ -288,32 +230,21 @@ export const FamilyRegisterForm = () => {
         avatar_url: avatarUrl,
         photo_url: avatarUrl,
         relationship_type: data.relationship as RelationshipType,
-        father_name: data.fatherId || '',
-        mother_name: data.motherId || '',
+        father_name: data.fatherName || '',
+        mother_name: data.motherName || '',
         is_admin: isAdmin,
         birth_date: data.birthDate || null,
-        title: data.title === 'Mme' ? 'Fille' : 'Fils',
+        title: profileTitle,
         situation: '',
-        is_patriarch: data.relationship === 'patriarche',
+        is_patriarch: data.relationship === 'patriarche' || data.relationship === 'matriarche',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
 
       console.log('Données du profil à créer:', profileData);
 
-      // Ajouter les relations spéciales si nécessaire
-      // if (data.spouseName) {
-      //   profileData.spouse_id = data.spouseName;
-      // }
-      // if (data.fatherName) {
-      //   profileData.father_id = data.fatherName;
-      // }
-      // if (data.motherName) {
-      //   profileData.mother_id = data.motherName;
-      // }
-
       try {
-        await api.createProfile(profileData, accessToken);
+        await api.createProfile(profileData);
         console.log('Profil créé avec succès');
       } catch (error) {
         console.error('Erreur détaillée lors de la création du profil:', error);
@@ -529,7 +460,7 @@ export const FamilyRegisterForm = () => {
 
           {/* Téléphone */}
           <div className="grid grid-cols-3 gap-4">
-          <div>
+            <div>
               <Label htmlFor="phoneCode">Indicatif</Label>
               <Input
                 id="phoneCode"
@@ -538,12 +469,12 @@ export const FamilyRegisterForm = () => {
               />
             </div>
             <div className="col-span-2">
-            <Label htmlFor="phone">Téléphone</Label>
-            <Input
-              id="phone"
-              {...methods.register('phone')}
+              <Label htmlFor="phone">Téléphone</Label>
+              <Input
+                id="phone"
+                {...methods.register('phone')}
                 placeholder="6 12 34 56 78"
-            />
+              />
             </div>
           </div>
 
@@ -577,6 +508,16 @@ export const FamilyRegisterForm = () => {
             />
           </div>
 
+          {/* Date de naissance */}
+          <div>
+            <Label htmlFor="birthDate">Date de naissance</Label>
+            <Input
+              id="birthDate"
+              type="date"
+              {...methods.register('birthDate')}
+            />
+          </div>
+
           {/* Affiliation */}
           <div className="space-y-2">
             <Label htmlFor="relationship">
@@ -592,12 +533,11 @@ export const FamilyRegisterForm = () => {
                 <SelectValue placeholder="Sélectionnez votre relation" />
               </SelectTrigger>
               <SelectContent>
-                {relationshipTypeOptions.map((option) => (
+                {relationshipOptions.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
                   </SelectItem>
                 ))}
-                {!patriarchExists && <SelectItem value="patriarche">Patriarche</SelectItem>}
               </SelectContent>
             </Select>
             {methods.formState.errors.relationship && (
@@ -605,46 +545,47 @@ export const FamilyRegisterForm = () => {
             )}
           </div>
 
-          {/* Champs des parents et conjoint */}
+          {/* Champs optionnels - Parents */}
           <div className="space-y-4">
-            <Label>{methods.watch('title') === 'M.' ? "Fils de" : "Fille de"}</Label>
+            <Label className="text-sm text-gray-600">Informations des parents (optionnel)</Label>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <ComboboxMembre
-                  name="fatherId"
+                  name="fatherName"
                   placeholder="Rechercher le père..."
                 />
-                {methods.formState.errors.fatherId && (
-                  <p className="text-sm text-red-600 mt-1">{methods.formState.errors.fatherId.message}</p>
+                {methods.formState.errors.fatherName && (
+                  <p className="text-sm text-red-600 mt-1">{methods.formState.errors.fatherName.message}</p>
                 )}
               </div>
               <div>
                 <ComboboxMembre
-                  name="motherId"
+                  name="motherName"
                   placeholder="Rechercher la mère..."
                 />
-                 {methods.formState.errors.motherId && (
-                  <p className="text-sm text-red-600 mt-1">{methods.formState.errors.motherId.message}</p>
+                {methods.formState.errors.motherName && (
+                  <p className="text-sm text-red-600 mt-1">{methods.formState.errors.motherName.message}</p>
                 )}
               </div>
             </div>
           </div>
 
+          {/* Champs optionnels - Conjoint */}
           <div className="space-y-2">
-            <Label>{methods.watch('title') === 'M.' ? 'Épouse' : 'Époux'}</Label>
+            <Label className="text-sm text-gray-600">Conjoint (optionnel)</Label>
             <ComboboxMembre
-              name="spouseId"
+              name="spouseName"
               placeholder={methods.watch('title') === 'M.' ? "Rechercher l'épouse..." : "Rechercher l'époux..."}
             />
-             {methods.formState.errors.spouseId && (
-                  <p className="text-sm text-red-600 mt-1">{methods.formState.errors.spouseId.message}</p>
-                )}
+            {methods.formState.errors.spouseName && (
+              <p className="text-sm text-red-600 mt-1">{methods.formState.errors.spouseName.message}</p>
+            )}
           </div>
 
           <Button
             type="submit"
             className="w-full"
-            disabled={isLoading || !methods.watch('photoUrl')}
+            disabled={isLoading}
           >
             {isLoading ? (
               <>

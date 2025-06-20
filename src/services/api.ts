@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -223,14 +222,16 @@ export const api = {
   },
 
   blockUser: async (userId: string, isBlocked: boolean): Promise<void> => {
-    const { error } = await supabase
-      .from('profiles')
-      .update({ is_blocked: isBlocked })
-      .eq('id', userId);
+    // NOTE: La colonne `is_blocked` n'existe pas dans le schéma `profiles`.
+    // La fonctionnalité est désactivée en attendant une migration de la base de données.
+    // const { error } = await supabase
+    //   .from('profiles')
+    //   .update({ is_blocked: isBlocked })
+    //   .eq('id', userId);
 
-    if (error) {
-      throw new Error(`Erreur lors du ${isBlocked ? 'blocage' : 'déblocage'} de l'utilisateur: ${error.message}`);
-    }
+    // if (error) {
+    //   throw new Error(`Erreur lors du ${isBlocked ? 'blocage' : 'déblocage'} de l'utilisateur: ${error.message}`);
+    // }
   },
 
   toggleAdmin: async (userId: string, isAdmin: boolean): Promise<void> => {
@@ -243,22 +244,24 @@ export const api = {
       throw new Error(`Erreur lors de la modification des privilèges admin: ${error.message}`);
     }
   },
-
   createProfile: async (profile: any): Promise<any> => {
     try {
       const { data: result, error: rpcError } = await supabase
         .rpc('create_profile_safe', {
           p_id: profile.id,
+          p_user_id: profile.user_id,
           p_email: profile.email,
           p_first_name: profile.first_name,
           p_last_name: profile.last_name,
           p_phone: profile.phone,
+          p_profession: profile.profession,
           p_current_location: profile.current_location,
           p_birth_place: profile.birth_place,
           p_avatar_url: profile.avatar_url,
+          p_photo_url: profile.photo_url,
           p_relationship_type: profile.relationship_type,
-          p_father_id: profile.father_id,
-          p_mother_id: profile.mother_id,
+          p_father_name: profile.father_name,
+          p_mother_name: profile.mother_name,
           p_is_admin: profile.is_admin,
           p_birth_date: profile.birth_date,
           p_title: profile.title,
@@ -270,10 +273,10 @@ export const api = {
         throw rpcError;
       }
 
-      if (result && result.success) {
-        return result.profile;
+      if ((result as any)?.success) {
+        return (result as any).profile;
       } else {
-        throw new Error(result?.error || 'La création du profil a échoué via RPC.');
+        throw new Error((result as any)?.error || 'La création du profil a échoué via RPC.');
       }
     } catch (error) {
       throw new Error(error instanceof Error ? error.message : 'Erreur inconnue lors de la création du profil.');

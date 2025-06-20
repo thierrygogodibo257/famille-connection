@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Combobox } from '@/components/ui/combobox';
 import { useFormContext } from 'react-hook-form';
 import { supabase } from '@/integrations/supabase/client';
-import { RelationshipType } from '@/types/family';
+import { RelationshipType } from '@/lib/validations/relationshipSchema';
 
 type Option = {
   value: string;
@@ -26,28 +26,39 @@ export const ComboboxMembre = ({
 
   useEffect(() => {
     const fetchMembers = async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, first_name, last_name, title, relationship_type')
-        .order('created_at', { ascending: false });
+      try {
+        // Query plus simple pour éviter les problèmes de RLS
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name, title')
+          .order('created_at', { ascending: false });
 
-      if (!data || error) {
-        console.error('Erreur lors du chargement des membres:', error);
-        return;
+        if (error) {
+          console.error('Erreur lors du chargement des membres:', error);
+          return;
+        }
+
+        if (!data || data.length === 0) {
+          setOptions([]);
+          return;
+        }
+
+        // Met les patriarches/matriarches en haut et trie le reste
+        const leaders = data.filter(m => m.title === 'Patriarche' || m.title === 'Matriarche');
+        const otherMembers = data.filter(m => m.title !== 'Patriarche' && m.title !== 'Matriarche');
+
+        const sorted = [...leaders, ...otherMembers];
+
+        const mapped = sorted.map(member => ({
+          value: `${member.first_name} ${member.last_name}`,
+          label: `${member.first_name} ${member.last_name} (${member.title})`
+        }));
+
+        setOptions(mapped);
+      } catch (err) {
+        console.error('Erreur lors du chargement des membres:', err);
+        setOptions([]);
       }
-
-      // Met les patriarches en haut et trie le reste
-      const sorted = [
-        ...data.filter(m => m.title === 'Patriarche'),
-        ...data.filter(m => m.title !== 'Patriarche')
-      ];
-
-      const mapped = sorted.map(member => ({
-        value: member.id,
-        label: `${member.first_name} ${member.last_name} (${member.title})`
-      }));
-
-      setOptions(mapped);
     };
 
     if (open && options.length === 0) {

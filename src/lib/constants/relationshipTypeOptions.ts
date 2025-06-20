@@ -1,6 +1,6 @@
 import { RelationshipType } from '../validations/relationshipSchema';
 
-export const relationshipTypeOptions: {
+export const baseRelationshipTypeOptions: {
   label: string;
   value: RelationshipType;
 }[] = [
@@ -21,3 +21,25 @@ export const relationshipTypeOptions: {
   { label: 'Époux', value: 'époux' },
   { label: 'Épouse', value: 'épouse' },
 ];
+
+// Fonction pour générer les options de relation dynamiquement
+export const getRelationshipTypeOptions = (
+  title: 'M.' | 'Mme' = 'M.',
+  patriarchExists: boolean = false
+) => {
+  const options = [...baseRelationshipTypeOptions];
+
+  // Ajouter Patriarche/Matriarche seulement s'il n'en existe pas déjà
+  if (!patriarchExists) {
+    if (title === 'M.') {
+      options.unshift({ label: 'Patriarche', value: 'patriarche' });
+    } else {
+      options.unshift({ label: 'Matriarche', value: 'matriarche' });
+    }
+  }
+
+  return options;
+};
+
+// Export par défaut pour la compatibilité
+export const relationshipTypeOptions = baseRelationshipTypeOptions;

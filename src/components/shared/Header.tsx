@@ -10,6 +10,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { api } from '@/services/api';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -202,51 +208,88 @@ const Header = () => {
           <div className="hidden md:flex items-center space-x-4">
             <div className="bg-white/10 backdrop-blur-md rounded-lg p-2 shadow-lg">
               <div className="flex space-x-3">
-                <motion.button
-                  type="button"
-                  className="social-button text-white/80 hover:text-white transition-colors"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.95 }}
-                  aria-label="Facebook"
-                >
-                  <Facebook className="w-5 h-5" />
-                </motion.button>
-                <motion.button
-                  type="button"
-                  className="social-button text-white/80 hover:text-white transition-colors"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.95 }}
-                  aria-label="Twitter"
-                >
-                  <Twitter className="w-5 h-5" />
-                </motion.button>
-                <motion.button
-                  type="button"
-                  className="social-button text-white/80 hover:text-white transition-colors"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.95 }}
-                  aria-label="Instagram"
-                >
-                  <Instagram className="w-5 h-5" />
-                </motion.button>
-                <motion.button
-                  type="button"
-                  className="social-button text-white/80 hover:text-white transition-colors"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.95 }}
-                  aria-label="Linkedin"
-                >
-                  <Linkedin className="w-5 h-5" />
-                </motion.button>
-                <motion.button
-                  type="button"
-                  className="social-button text-white/80 hover:text-white transition-colors"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.95 }}
-                  aria-label="MessageCircle"
-                >
-                  <MessageCircle className="w-5 h-5" />
-                </motion.button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <motion.button
+                        type="button"
+                        className="social-button text-white/80 hover:text-white transition-colors"
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.95 }}
+                        aria-label="Facebook"
+                      >
+                        <Facebook className="w-5 h-5" />
+                      </motion.button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Facebook</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <motion.button
+                        type="button"
+                        className="social-button text-white/80 hover:text-white transition-colors"
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.95 }}
+                        aria-label="Twitter"
+                      >
+                        <Twitter className="w-5 h-5" />
+                      </motion.button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Twitter</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <motion.button
+                        type="button"
+                        className="social-button text-white/80 hover:text-white transition-colors"
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.95 }}
+                        aria-label="Instagram"
+                      >
+                        <Instagram className="w-5 h-5" />
+                      </motion.button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Instagram</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <motion.button
+                        type="button"
+                        className="social-button text-white/80 hover:text-white transition-colors"
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.95 }}
+                        aria-label="Linkedin"
+                      >
+                        <Linkedin className="w-5 h-5" />
+                      </motion.button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>LinkedIn</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <motion.button
+                        type="button"
+                        className="social-button text-white/80 hover:text-white transition-colors"
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.95 }}
+                        aria-label="MessageCircle"
+                      >
+                        <MessageCircle className="w-5 h-5" />
+                      </motion.button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Contact</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
             </div>
         </div>
