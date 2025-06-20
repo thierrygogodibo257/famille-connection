@@ -42,9 +42,9 @@ export const FamilyRegisterSchema = z.object({
   birthPlace: z.string().optional(),
   photoUrl: z.string().optional(),
   relationship: RelationshipEnum,
-  spouseName: z.string().optional(),
-  fatherName: z.string().optional(),
-  motherName: z.string().optional(),
+  spouseId: z.string().optional(),
+  fatherId: z.string().optional(),
+  motherId: z.string().optional(),
   birthDate: z.string().optional(),
 });
 

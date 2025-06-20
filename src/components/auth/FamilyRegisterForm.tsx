@@ -48,9 +48,9 @@ export const FamilyRegisterForm = () => {
       birthPlace: '',
       photoUrl: '',
       relationship: 'fils',
-      spouseName: '',
-      fatherName: '',
-      motherName: '',
+      spouseId: '',
+      fatherId: '',
+      motherId: '',
       birthDate: '',
     }
   });
@@ -197,7 +197,7 @@ export const FamilyRegisterForm = () => {
       }
 
       // Vérifier si un membre lié est requis mais non fourni
-      if (RELATIONS_REQUIRING_INFO.includes(data.relationship as any) && !data.spouseName && !data.fatherName && !data.motherName) {
+      if (RELATIONS_REQUIRING_INFO.includes(data.relationship as any) && !data.spouseId && !data.fatherId && !data.motherId) {
         toast({
           title: "Informations supplémentaires requises",
           description: `Veuillez fournir les informations nécessaires pour la relation ${data.relationship === 'époux' ? 'conjugalité' : 'parentale'}`,
@@ -222,8 +222,8 @@ export const FamilyRegisterForm = () => {
             birth_place: data.birthPlace || '',
             photo_url: '',
             relationship_type: data.relationship as RelationshipType,
-            father_name: data.fatherName || '',
-            mother_name: data.motherName || '',
+            father_name: data.fatherId || '',
+            mother_name: data.motherId || '',
             is_admin: isAdmin,
             birth_date: data.birthDate || null,
             title: data.title === 'Mme' ? 'Fille' : 'Fils',
@@ -288,8 +288,8 @@ export const FamilyRegisterForm = () => {
         avatar_url: avatarUrl,
         photo_url: avatarUrl,
         relationship_type: data.relationship as RelationshipType,
-        father_name: data.fatherName || '',
-        mother_name: data.motherName || '',
+        father_name: data.fatherId || '',
+        mother_name: data.motherId || '',
         is_admin: isAdmin,
         birth_date: data.birthDate || null,
         title: data.title === 'Mme' ? 'Fille' : 'Fils',
@@ -605,64 +605,40 @@ export const FamilyRegisterForm = () => {
             )}
           </div>
 
-          {/* Champs conditionnels pour les relations spéciales */}
-          {RELATIONS_REQUIRING_INFO.includes(methods.watch('relationship') as any) && (
-            <div className="space-y-4">
-              {(methods.watch('relationship') === 'époux' || methods.watch('relationship') === 'épouse') && (
-                <div>
-                  <Label htmlFor="spouseName">Nom du conjoint</Label>
-                  <Input
-                    id="spouseName"
-                    {...methods.register('spouseName')}
-                    placeholder="Nom et prénom de votre conjoint(e)"
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    Indiquez le nom complet de la personne à qui vous êtes marié(e)
-                  </p>
-                </div>
-              )}
-
-              {(methods.watch('relationship') === 'fils' || methods.watch('relationship') === 'fille') && (
-                <div>
-                  <Label htmlFor="fatherName">Nom du père</Label>
-                  <Input
-                    id="fatherName"
-                    {...methods.register('fatherName')}
-                    placeholder="Nom et prénom de votre père"
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    Indiquez le nom complet de votre père
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Parents (toujours affichés) */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="fatherName">Nom du Père</Label>
-              <div className="relative">
-                <Input
-                  id="fatherName"
-                  {...methods.register('fatherName')}
-                  placeholder="Nom du père"
+          {/* Champs des parents et conjoint */}
+          <div className="space-y-4">
+            <Label>{methods.watch('title') === 'M.' ? "Fils de" : "Fille de"}</Label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <ComboboxMembre
+                  name="fatherId"
+                  placeholder="Rechercher le père..."
                 />
-                <ThumbsUp className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-green-500" />
+                {methods.formState.errors.fatherId && (
+                  <p className="text-sm text-red-600 mt-1">{methods.formState.errors.fatherId.message}</p>
+                )}
+              </div>
+              <div>
+                <ComboboxMembre
+                  name="motherId"
+                  placeholder="Rechercher la mère..."
+                />
+                 {methods.formState.errors.motherId && (
+                  <p className="text-sm text-red-600 mt-1">{methods.formState.errors.motherId.message}</p>
+                )}
               </div>
             </div>
+          </div>
 
-            <div>
-              <Label htmlFor="motherName">Nom de la Mère</Label>
-              <div className="relative">
-                <Input
-                  id="motherName"
-                  {...methods.register('motherName')}
-                  placeholder="Nom de la mère"
-                />
-                <ThumbsUp className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-green-500" />
-              </div>
-            </div>
+          <div className="space-y-2">
+            <Label>{methods.watch('title') === 'M.' ? 'Épouse' : 'Époux'}</Label>
+            <ComboboxMembre
+              name="spouseId"
+              placeholder={methods.watch('title') === 'M.' ? "Rechercher l'épouse..." : "Rechercher l'époux..."}
+            />
+             {methods.formState.errors.spouseId && (
+                  <p className="text-sm text-red-600 mt-1">{methods.formState.errors.spouseId.message}</p>
+                )}
           </div>
 
           <Button
