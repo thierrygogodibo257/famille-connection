@@ -28,22 +28,41 @@ export const Avatar = ({ src, alt, size = 'md', className, fallback }: AvatarPro
     xl: 'w-12 h-12'
   };
 
+  // Corriger l'URL de l'avatar Supabase si nécessaire
+  const getImageUrl = (url?: string) => {
+    if (!url) return null;
+    
+    // Si l'URL commence par http, la retourner telle quelle
+    if (url.startsWith('http')) {
+      return url;
+    }
+    
+    // Si c'est un chemin relatif Supabase storage, construire l'URL complète
+    if (url.startsWith('avatars/')) {
+      return `https://rrlixvlwsaeaugudwbiw.supabase.co/storage/v1/object/public/${url}`;
+    }
+    
+    return url;
+  };
+
+  const imageUrl = getImageUrl(src);
+
   return (
     <div className={cn(
       'relative rounded-full overflow-hidden bg-gradient-to-br from-whatsapp-100 to-whatsapp-200 flex items-center justify-center border-2 border-white shadow-md',
       sizeClasses[size],
       className
     )}>
-      {src && !imageError ? (
+      {imageUrl && !imageError ? (
         <img
-          src={src}
+          src={imageUrl}
           alt={alt || 'Avatar'}
           className="w-full h-full object-cover"
           onError={() => setImageError(true)}
         />
       ) : fallback ? (
         <div className="flex items-center justify-center w-full h-full bg-gradient-to-br from-whatsapp-400 to-whatsapp-500 text-white font-semibold">
-          {fallback}
+          {fallback.slice(0, 2).toUpperCase()}
         </div>
       ) : (
         <User className={cn('text-whatsapp-600', iconSizes[size])} />

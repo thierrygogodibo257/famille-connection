@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { api } from '@/services/api';
@@ -8,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar } from '@/components/shared/Avatar';
 import { useToast } from '@/hooks/use-toast';
 import { DeleteUserButton } from '@/components/family/DeleteUserButton';
+import { DeleteAllButton } from '@/components/family/DeleteAllButton';
 import { EditUserDialog } from '@/components/family/EditUserDialog';
 import type { Profile } from '@/services/api';
 import { supabase } from '@/integrations/supabase/client';
@@ -77,7 +79,7 @@ const Admin = () => {
         title: "Succès",
         description: `Utilisateur ${isBlocked ? 'débloqué' : 'bloqué'} avec succès`,
       });
-      fetchMembers(); // Rafraîchir la liste
+      fetchMembers();
     } catch (error: any) {
       toast({
         title: "Erreur",
@@ -94,7 +96,7 @@ const Admin = () => {
         title: "Succès",
         description: `Utilisateur ${isAdmin ? 'retiré des admins' : 'promu admin'} avec succès`,
       });
-      fetchMembers(); // Rafraîchir la liste
+      fetchMembers();
     } catch (error: any) {
       toast({
         title: "Erreur",
@@ -110,7 +112,7 @@ const Admin = () => {
   };
 
   const handleEditSave = () => {
-    fetchMembers(); // Rafraîchir la liste après édition
+    fetchMembers();
   };
 
   const handleTestConnection = async () => {
@@ -199,15 +201,21 @@ const Admin = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Administration des Membres</h1>
-        <p className="text-gray-600">Gérez tous les membres de la famille</p>
-        <Button
-          onClick={handleTestConnection}
-          variant="outline"
-          className="mt-2"
-        >
-          Test Connexion
-        </Button>
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">Administration des Membres</h1>
+            <p className="text-gray-600">Gérez tous les membres de la famille</p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              onClick={handleTestConnection}
+              variant="outline"
+            >
+              Test Connexion
+            </Button>
+            <DeleteAllButton isAdmin={isAdmin} onDelete={fetchMembers} />
+          </div>
+        </div>
       </div>
 
       {/* Filtres et recherche */}
@@ -258,9 +266,6 @@ const Admin = () => {
                   Rôle
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Statut
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Date d'inscription
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -297,27 +302,11 @@ const Admin = () => {
                       {member.is_admin ? 'Administrateur' : 'Membre'}
                     </Badge>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <Badge variant={member.is_blocked ? 'destructive' : 'default'}>
-                      {member.is_blocked ? 'Bloqué' : 'Actif'}
-                    </Badge>
-                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {member.created_at ? new Date(member.created_at).toLocaleDateString('fr-FR') : '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex items-center gap-2">
-                      {/* Bouton bloquer/débloquer */}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleBlockUser(member.id, member.is_blocked || false)}
-                        className="flex items-center gap-1"
-                      >
-                        {member.is_blocked ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                        {member.is_blocked ? 'Débloquer' : 'Bloquer'}
-                      </Button>
-
                       {/* Bouton admin/membre */}
                       {member.id !== user?.id && (
                         <Button

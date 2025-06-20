@@ -1,8 +1,10 @@
+
 import { useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useFamilyMembers } from '@/hooks/useFamilyMembers';
 import { Loader2 } from 'lucide-react';
 import { InteractiveFamilyTree } from './InteractiveFamilyTree';
+import { DeleteAllButton } from './DeleteAllButton';
 
 export function FamilyTree() {
   const { user, session, isLoading: authLoading } = useAuth();
@@ -22,6 +24,8 @@ export function FamilyTree() {
       console.log('[FamilyTree] First member:', members[0]);
     }
   }, [members]);
+
+  const isAdmin = user?.user_metadata?.is_admin || false;
 
   if (authLoading || membersLoading) {
     return (
@@ -52,7 +56,10 @@ export function FamilyTree() {
   return (
     <div className="container mx-auto py-8">
       <div className="rounded-lg border bg-card p-8">
-        <h1 className="mb-6 text-2xl font-bold">Arbre Familial</h1>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold">Arbre Familial</h1>
+          <DeleteAllButton isAdmin={isAdmin} onDelete={fetchMembers} />
+        </div>
         {members.length === 0 ? (
           <div className="min-h-[400px] rounded-lg border border-dashed p-8">
             <p className="text-center text-muted-foreground">
@@ -60,10 +67,7 @@ export function FamilyTree() {
             </p>
           </div>
         ) : (
-
-
-            <InteractiveFamilyTree />
-
+          <InteractiveFamilyTree />
         )}
       </div>
     </div>
