@@ -1,0 +1,10 @@
+
+Structure détaillée du projet Famille Connection
+
+Version 1.0 - Structure de base établie
+Tous les dossiers et fichiers de base ont été créés selon les spécifications.
+
+Prochaines étapes :
+- Configuration Supabase
+- Implémentation de l'authentification
+- Développement des composants famille

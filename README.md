@@ -1,73 +1,67 @@
-# Welcome to your Lovable project
 
-## Project info
+# Famille Connection
 
-**URL**: https://lovable.dev/projects/a62b134b-ff2d-40a0-9f80-22d434559e69
+Une application moderne pour connecter les familles, créer des arbres généalogiques et partager des souvenirs.
 
-## How can I edit this code?
+## 🚀 Technologies utilisées
 
-There are several ways of editing your application.
+- **Frontend:** React 18 + TypeScript + Vite
+- **Styling:** Tailwind CSS + shadcn/ui
+- **Backend:** Supabase
+- **Validation:** Zod + React Hook Form
+- **Icons:** Lucide React
+- **Animations:** Framer Motion
+- **State Management:** TanStack Query
 
-**Use Lovable**
+## 📦 Installation
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/a62b134b-ff2d-40a0-9f80-22d434559e69) and start prompting.
+```bash
+npm install
+```
 
-Changes made via Lovable will be committed automatically to this repo.
+## 🔧 Configuration
 
-**Use your preferred IDE**
+1. Configurez votre instance Supabase
+2. Ajoutez vos variables d'environnement dans `.env`
+3. Lancez le projet en développement
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## 🏗️ Structure du projet
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```
+src/
+├── components/          # Composants réutilisables
+│   ├── auth/           # Composants d'authentification
+│   ├── family/         # Composants famille
+│   ├── layout/         # Composants de mise en page
+│   ├── shared/         # Composants partagés
+│   └── ui/             # Composants UI de base
+├── hooks/              # Hooks personnalisés
+├── integrations/       # Intégrations externes
+├── lib/                # Utilitaires et configurations
+├── pages/              # Pages de l'application
+├── services/           # Services API
+└── types/              # Types TypeScript
+```
 
-**Use GitHub Codespaces**
+## 🔒 Sécurité
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+Ce projet utilise Supabase pour l'authentification et la gestion des données avec des politiques de sécurité au niveau des lignes (RLS).
 
-## What technologies are used for this project?
+## 📝 Scripts disponibles
 
-This project is built with:
+- `npm run dev` - Démarre le serveur de développement
+- `npm run build` - Construit l'application pour la production
+- `npm run lint` - Vérifie la qualité du code
+- `npm run test:cors` - Teste la configuration CORS
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## 🤝 Contribution
 
-## How can I deploy this project?
+Les contributions sont les bienvenues ! Veuillez consulter les guidelines de contribution.
 
-Simply open [Lovable](https://lovable.dev/projects/a62b134b-ff2d-40a0-9f80-22d434559e69) and click on Share -> Publish.
+## 📄 Licence
 
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+Ce projet est sous licence MIT.

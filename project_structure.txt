@@ -1,0 +1,10 @@
+
+Famille Connection - Structure du projet
+
+Cette structure suit les bonnes pratiques pour un projet React + TypeScript + Supabase.
+
+Dossiers principaux :
+- src/ : Code source de l'application
+- supabase/ : Configuration et fonctions Supabase
+- docs/ : Documentation du projet
+- scripts/ : Scripts utilitaires
