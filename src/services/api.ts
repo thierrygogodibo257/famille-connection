@@ -495,52 +495,26 @@ export const api = {
       throw error;
     }
   },
-  createProfile: async (profile: object, token: string) => {
+  createProfile: async (profile: any, token: string) => {
     try {
-      // Essayer d'abord la fonction Edge
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create_profile`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(profile),
-      });
+      console.log('Création du profil via RPC create_profile_safe...');
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.warn('Fonction Edge échouée, utilisation de la méthode directe:', errorData.error);
-        // Fallback vers la méthode directe
-        return await api.createProfileDirect(profile);
-      }
-
-      // Nous attendons un objet profil unique
-      return await response.json();
-    } catch (error) {
-      console.error('Erreur lors de la création du profil:', error);
-      // Fallback vers la méthode directe
-      return await api.createProfileDirect(profile);
-    }
-  },
-
-  createProfileDirect: async (profile: any) => {
-    try {
-      console.log('Création directe du profil via Supabase client...');
-
-      // Utiliser la fonction SQL qui contourne tous les triggers
-      const { data: result, error: profileError } = await supabase
-        .rpc('create_profile_no_triggers', {
+      const { data: result, error: rpcError } = await supabase
+        .rpc('create_profile_safe', {
           p_id: profile.id,
+          p_user_id: profile.user_id,
           p_email: profile.email,
           p_first_name: profile.first_name,
           p_last_name: profile.last_name,
           p_phone: profile.phone,
+          p_profession: profile.profession,
           p_current_location: profile.current_location,
           p_birth_place: profile.birth_place,
           p_avatar_url: profile.avatar_url,
+          p_photo_url: profile.photo_url,
           p_relationship_type: profile.relationship_type,
-          p_father_id: profile.father_id,
-          p_mother_id: profile.mother_id,
+          p_father_name: profile.father_name,
+          p_mother_name: profile.mother_name,
           p_is_admin: profile.is_admin,
           p_birth_date: profile.birth_date,
           p_title: profile.title,
@@ -548,20 +522,23 @@ export const api = {
           p_is_patriarch: profile.is_patriarch
         });
 
-      if (profileError) {
-        console.error('Erreur détaillée Supabase:', profileError);
-        throw profileError;
+      if (rpcError) {
+        console.error('Erreur RPC Supabase:', rpcError);
+        throw rpcError;
       }
 
-      if (!result.success) {
-        throw new Error(result.error || 'Erreur lors de la création du profil');
+      // La fonction RPC retourne un JSON, nous vérifions son contenu
+      if (result && result.success) {
+        console.log('Profil créé avec succès:', result.profile);
+        return result.profile;
+      } else {
+        throw new Error(result.error || 'La création du profil a échoué via RPC.');
       }
 
-      console.log('Profil créé avec succès:', result.profile);
-      return { success: true, profile: result.profile };
     } catch (error) {
-      console.error('Erreur lors de la création directe du profil:', error);
-      throw new Error(error instanceof Error ? error.message : 'Erreur inconnue');
+      console.error('Erreur lors de l\'appel à createProfile:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue lors de la création du profil.';
+      throw new Error(errorMessage);
     }
   },
 
