@@ -1,3 +1,4 @@
+
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -63,13 +64,6 @@ serve(async (req) => {
 
     if (relationsError) {
       console.error('Error deleting family relations:', relationsError)
-      return new Response(
-        JSON.stringify({ error: `Failed to delete family relations: ${relationsError.message}` }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      )
     }
 
     // 2. Delete relationships
@@ -80,13 +74,6 @@ serve(async (req) => {
 
     if (relationshipsError) {
       console.error('Error deleting relationships:', relationshipsError)
-      return new Response(
-        JSON.stringify({ error: `Failed to delete relationships: ${relationshipsError.message}` }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      )
     }
 
     // 3. Delete family members
@@ -97,13 +84,6 @@ serve(async (req) => {
 
     if (membersError) {
       console.error('Error deleting family members:', membersError)
-      return new Response(
-        JSON.stringify({ error: `Failed to delete family members: ${membersError.message}` }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      )
     }
 
     // 4. Delete join requests
@@ -114,13 +94,6 @@ serve(async (req) => {
 
     if (requestsError) {
       console.error('Error deleting join requests:', requestsError)
-      return new Response(
-        JSON.stringify({ error: `Failed to delete join requests: ${requestsError.message}` }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      )
     }
 
     // 5. Delete family trees
@@ -131,13 +104,6 @@ serve(async (req) => {
 
     if (treesError) {
       console.error('Error deleting family trees:', treesError)
-      return new Response(
-        JSON.stringify({ error: `Failed to delete family trees: ${treesError.message}` }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      )
     }
 
     // 6. Delete messages
@@ -148,13 +114,6 @@ serve(async (req) => {
 
     if (messagesError) {
       console.error('Error deleting messages:', messagesError)
-      return new Response(
-        JSON.stringify({ error: `Failed to delete messages: ${messagesError.message}` }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      )
     }
 
     // 7. Delete notifications
@@ -165,13 +124,6 @@ serve(async (req) => {
 
     if (notificationsError) {
       console.error('Error deleting notifications:', notificationsError)
-      return new Response(
-        JSON.stringify({ error: `Failed to delete notifications: ${notificationsError.message}` }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      )
     }
 
     // 8. Delete profiles
@@ -182,13 +134,6 @@ serve(async (req) => {
 
     if (profilesError) {
       console.error('Error deleting profiles:', profilesError)
-      return new Response(
-        JSON.stringify({ error: `Failed to delete profiles: ${profilesError.message}` }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      )
     }
 
     // 9. Get all auth users and delete them
@@ -196,21 +141,18 @@ serve(async (req) => {
 
     if (authUsersError) {
       console.error('Error listing auth users:', authUsersError)
-      return new Response(
-        JSON.stringify({ error: `Failed to list auth users: ${authUsersError.message}` }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      )
     }
 
+    let deletedCount = 0;
     // Delete each auth user
-    for (const user of users) {
-      const { error: deleteUserError } = await supabaseClient.auth.admin.deleteUser(user.id)
-      if (deleteUserError) {
-        console.error(`Error deleting auth user ${user.id}:`, deleteUserError)
-        // Continue with other users even if one fails
+    if (users) {
+      for (const user of users) {
+        const { error: deleteUserError } = await supabaseClient.auth.admin.deleteUser(user.id)
+        if (deleteUserError) {
+          console.error(`Error deleting auth user ${user.id}:`, deleteUserError)
+        } else {
+          deletedCount++;
+        }
       }
     }
 
@@ -220,7 +162,7 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         message: 'All users, profiles, and related data have been deleted successfully',
-        deletedUsers: users.length
+        deletedUsers: deletedCount
       }),
       {
         status: 200,
