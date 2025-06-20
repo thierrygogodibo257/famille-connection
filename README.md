@@ -1,67 +1,187 @@
+# Famille Connect - Arbre Généalogique
 
-# Famille Connection
+## Vue d'ensemble
 
-Une application moderne pour connecter les familles, créer des arbres généalogiques et partager des souvenirs.
+Famille Connect est une application web moderne pour gérer et visualiser les arbres généalogiques familiaux. L'application utilise Supabase comme backend avec des Edge Functions pour les opérations administratives.
 
-## 🚀 Technologies utilisées
+## Technologies utilisées
 
-- **Frontend:** React 18 + TypeScript + Vite
-- **Styling:** Tailwind CSS + shadcn/ui
-- **Backend:** Supabase
-- **Validation:** Zod + React Hook Form
-- **Icons:** Lucide React
-- **Animations:** Framer Motion
-- **State Management:** TanStack Query
+- **Frontend**: React, TypeScript, Vite
+- **UI**: shadcn-ui, Tailwind CSS
+- **Backend**: Supabase (PostgreSQL, Auth, Storage)
+- **Edge Functions**: Deno (TypeScript)
+- **Déploiement**: Vercel/Netlify
 
-## 📦 Installation
+## Configuration CORS
 
-```bash
-npm install
+### Points importants
+
+Depuis 2025, Supabase ne propose plus de configuration CORS via le tableau de bord. La gestion CORS doit être faite manuellement dans les Edge Functions.
+
+### Bonnes pratiques implémentées
+
+✅ **API REST Supabase** : Gestion automatique des en-têtes CORS
+✅ **Edge Functions** : Gestion manuelle avec pattern standard
+✅ **Tests CORS** : Scripts de validation et de test
+
+### Pattern CORS pour les Edge Functions
+
+```typescript
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-admin-secret',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+}
+
+// Gestion OPTIONS
+if (req.method === 'OPTIONS') {
+  return new Response('ok', { headers: corsHeaders })
+}
+
+// Réponse avec en-têtes CORS
+return new Response(JSON.stringify(data), {
+  headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+})
 ```
 
-## 🔧 Configuration
+## Installation et développement
 
-1. Configurez votre instance Supabase
-2. Ajoutez vos variables d'environnement dans `.env`
-3. Lancez le projet en développement
+### Prérequis
 
-```bash
+- Node.js & npm
+- Compte Supabase
+- Supabase CLI
+
+### Installation
+
+```sh
+# Cloner le repository
+git clone <YOUR_GIT_URL>
+cd modern-family-tree
+
+# Installer les dépendances
+npm install
+
+# Configurer les variables d'environnement
+cp .env.example .env.local
+# Éditer .env.local avec vos clés Supabase
+
+# Démarrer le serveur de développement
 npm run dev
 ```
 
-## 🏗️ Structure du projet
+### Variables d'environnement
 
-```
-src/
-├── components/          # Composants réutilisables
-│   ├── auth/           # Composants d'authentification
-│   ├── family/         # Composants famille
-│   ├── layout/         # Composants de mise en page
-│   ├── shared/         # Composants partagés
-│   └── ui/             # Composants UI de base
-├── hooks/              # Hooks personnalisés
-├── integrations/       # Intégrations externes
-├── lib/                # Utilitaires et configurations
-├── pages/              # Pages de l'application
-├── services/           # Services API
-└── types/              # Types TypeScript
+```env
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
-## 🔒 Sécurité
+## Edge Functions
 
-Ce projet utilise Supabase pour l'authentification et la gestion des données avec des politiques de sécurité au niveau des lignes (RLS).
+### Fonctions disponibles
 
-## 📝 Scripts disponibles
+1. **delete_all_users** : Suppression complète de tous les utilisateurs (admin)
+2. **delete_user** : Suppression d'un utilisateur spécifique (admin)
+3. **profiles** : Gestion des profils utilisateurs
 
-- `npm run dev` - Démarre le serveur de développement
-- `npm run build` - Construit l'application pour la production
-- `npm run lint` - Vérifie la qualité du code
-- `npm run test:cors` - Teste la configuration CORS
+### Déploiement des Edge Functions
 
-## 🤝 Contribution
+```sh
+# Validation CORS
+node scripts/deploy-functions.js
 
-Les contributions sont les bienvenues ! Veuillez consulter les guidelines de contribution.
+# Tests CORS
+node scripts/test-cors.js
 
-## 📄 Licence
+# Déploiement manuel
+supabase functions deploy delete_all_users
+supabase functions deploy delete_user
+supabase functions deploy profiles
+```
+
+### Tests CORS
+
+```sh
+# Test complet
+node scripts/test-cors.js
+
+# Test manuel avec curl
+curl -X OPTIONS \
+  -H "Origin: https://localhost:5173" \
+  -H "Access-Control-Request-Method: POST" \
+  -H "Access-Control-Request-Headers: authorization,content-type,x-admin-secret" \
+  https://your-project.supabase.co/functions/v1/delete_all_users
+```
+
+## Structure du projet
+
+```
+modern-family-tree/
+├── src/
+│   ├── components/          # Composants React
+│   ├── pages/              # Pages de l'application
+│   ├── hooks/              # Hooks personnalisés
+│   ├── services/           # Services API
+│   └── types/              # Types TypeScript
+├── supabase/
+│   └── functions/          # Edge Functions
+├── docs/
+│   └── cors.md            # Documentation CORS
+├── scripts/
+│   ├── test-cors.js       # Tests CORS
+│   └── deploy-functions.js # Déploiement
+└── README.md
+```
+
+## Fonctionnalités
+
+### Authentification
+- Inscription/Connexion avec Supabase Auth
+- Rôles utilisateur (Membre/Administrateur)
+- Code secret pour les administrateurs
+
+### Gestion des membres
+- Ajout/modification de profils
+- Relations familiales
+- Photos de profil
+
+### Arbre généalogique
+- Visualisation interactive
+- Navigation entre les générations
+- Recherche de membres
+
+### Administration
+- Suppression d'utilisateurs
+- Suppression complète (admin)
+- Statistiques familiales
+
+## Déploiement
+
+### Frontend
+```sh
+npm run build
+npm run preview
+```
+
+### Edge Functions
+```sh
+supabase functions deploy --project-ref your-project-ref
+```
+
+## Documentation
+
+- [Guide CORS](docs/cors.md) - Bonnes pratiques CORS
+- [Supabase Docs](https://supabase.com/docs) - Documentation officielle
+- [Edge Functions](https://supabase.com/docs/guides/functions) - Guide des fonctions
+
+## Support
+
+Pour toute question ou problème :
+1. Consultez la [documentation CORS](docs/cors.md)
+2. Vérifiez les logs des Edge Functions dans le dashboard Supabase
+3. Testez avec les scripts fournis
+
+## Licence
 
 Ce projet est sous licence MIT.
