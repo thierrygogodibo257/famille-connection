@@ -1,7 +1,10 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
-export type Profile = Database['public']['Tables']['profiles']['Row'];
+export type Profile = Database['public']['Tables']['profiles']['Row'] & {
+  father_id?: string;
+  mother_id?: string;
+};
 
 export const api = {
   profiles: {
@@ -22,6 +25,20 @@ export const api = {
       if (error) throw new Error(error.message);
       if (!data) throw new Error('Profil non trouvé');
       return data;
+    },
+
+    getAll: async (): Promise<Profile[]> => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, email, phone, title, relationship_type, birth_date, birth_place, current_location, situation, avatar_url, photo_url, father_id, mother_id, is_admin, is_patriarch, created_at, updated_at')
+        .order('created_at', { ascending: false });
+
+      if (error) throw new Error(error.message);
+      return (data || []).map(item => ({
+        ...item,
+        father_id: item.father_id || null,
+        mother_id: item.mother_id || null
+      }));
     },
 
     createFromUserMetadata: async (user: any): Promise<Profile> => {

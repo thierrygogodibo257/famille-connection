@@ -34,7 +34,8 @@ export const useFamilyMembers = () => {
         is_admin: profile.is_admin,
         is_patriarch: profile.is_patriarch,
         created_at: profile.created_at,
-        updated_at: profile.updated_at
+        updated_at: profile.updated_at,
+        connections: [] // Initialize connections as empty array
       }));
       
       setMembers(familyMembers);
