@@ -96,16 +96,13 @@ const Members = () => {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
           {filteredMembers.map((member) => (
             <MemberCard
               key={member.id}
               member={member}
-              // On retire le variant compact pour utiliser le layout vertical par défaut
               isAdmin={isAdmin}
               onDelete={fetchMembers}
-              // On peut aussi passer un style personnalisé si besoin
-              // style={{ minWidth: 320, maxWidth: 400 }}
             />
           ))}
         </div>

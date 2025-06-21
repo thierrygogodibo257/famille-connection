@@ -155,6 +155,78 @@ const Dashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Carte Profil Utilisateur EN PREMIER */}
+        <Card
+          className={cn(
+            'p-6 cursor-pointer transition-all duration-300 hover-lift glass-effect',
+            hoveredCard === 'profile' && 'transform -translate-y-2 shadow-xl'
+          )}
+          onMouseEnter={() => setHoveredCard('profile')}
+          onMouseLeave={() => setHoveredCard(null)}
+          onClick={() => navigate(ROUTES.DASHBOARD.PROFILE)}
+        >
+          <div className="flex items-center space-x-4 mb-4">
+            <UserAvatar
+              user={userProfile || {
+                first_name: user?.user_metadata?.first_name || 'Utilisateur',
+                last_name: user?.user_metadata?.last_name || '',
+                email: user?.email || '',
+                avatar_url: user?.user_metadata?.photo_url,
+                photo_url: user?.user_metadata?.photo_url
+              }}
+              size="lg"
+              className="w-20 h-20 ring-2 ring-purple-200"
+            />
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-gray-900">
+                {userProfile?.first_name || user?.user_metadata?.first_name || 'Utilisateur'} {userProfile?.last_name || user?.user_metadata?.last_name || ''}
+              </h3>
+              <p className="text-sm text-gray-600 flex items-center">
+                <Mail className="w-3 h-3 mr-1" />
+                {userProfile?.email || user?.email}
+              </p>
+              {(userProfile?.phone || user?.user_metadata?.phone) && (
+                <p className="text-sm text-gray-600 flex items-center">
+                  <Phone className="w-3 h-3 mr-1" />
+                  {userProfile?.phone || user?.user_metadata?.phone}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <User className="w-4 h-4 text-purple-600" />
+              <span className="text-sm text-gray-600">Profil</span>
+            </div>
+            <div className={cn(
+              'w-8 h-8 rounded-lg flex items-center justify-center transition-transform duration-300',
+              'bg-gradient-to-br from-purple-500 to-purple-600',
+              hoveredCard === 'profile' && 'animate-bounce'
+            )}>
+              <Settings className="w-4 h-4 text-white" />
+            </div>
+          </div>
+
+          {/* Badge Patriarche ou Affiliation */}
+          <div className="mt-2 flex items-center justify-center">
+            {(userProfile?.is_patriarch || user?.user_metadata?.is_patriarch) ? (
+              <span className="px-4 py-1 rounded-full bg-gradient-to-r from-yellow-400 to-yellow-600 text-white font-bold shadow-lg text-md border-2 border-yellow-300 animate-bounce-in-3d">
+                Patriarche
+              </span>
+            ) : (userProfile?.relationship_type || user?.user_metadata?.relationship_type) ? (
+              <span className="px-3 py-1 rounded-full bg-gradient-to-r from-blue-400 to-blue-600 text-white font-semibold shadow text-sm border border-blue-300 animate-bounce-in-3d">
+                {(userProfile?.relationship_type || user?.user_metadata?.relationship_type).charAt(0).toUpperCase() + (userProfile?.relationship_type || user?.user_metadata?.relationship_type).slice(1)}
+              </span>
+            ) : null}
+          </div>
+
+          <p className="text-gray-600 text-sm mt-2">
+            Gérez vos informations personnelles
+          </p>
+        </Card>
+
+        {/* Ensuite les autres cartes */}
         {dashboardItems.map((item) => {
           const Icon = item.icon;
           const isHovered = hoveredCard === item.id;
