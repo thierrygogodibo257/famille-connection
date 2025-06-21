@@ -1,146 +1,44 @@
 import { supabase } from '@/integrations/supabase/client';
+import type { FamilyMember, ProfileData, Title, RelationshipType } from '@/types/family';
 import type { Database } from '@/integrations/supabase/types';
 
-export type Profile = Database['public']['Tables']['profiles']['Row'] & {
-  father_id?: string;
-  mother_id?: string;
-};
+export type Profile = Database['public']['Tables']['profiles']['Row'];
+
+type UpdateProfile = {
+  first_name: string;
+  last_name: string;
+  phone?: string;
+  country?: string;
+  title: Database['public']['Enums']['family_title'];
+  relationship_type?: Database['public']['Enums']['relationship_type'];
+  birth_date?: string;
+  birth_place?: string;
+  current_location?: string;
+  situation?: string;
+  profession?: string;
+  photo_url?: string;
+  father_name?: string;
+  mother_name?: string;
+}
 
 export const api = {
+  async getCurrentUser() {
+    return supabase.auth.getUser();
+  },
+
+  async login(email: string, password: string) {
+    return supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+  },
+
+  async logout() {
+    return supabase.auth.signOut();
+  },
+
   profiles: {
-    getCurrent: async (): Promise<Profile> => {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError) throw new Error('Erreur d\'authentification');
-      if (!user) throw new Error('Non authentifié');
-
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-
-      if (error && error.code === 'PGRST116') {
-        return await api.profiles.createFromUserMetadata(user);
-      }
-      if (error) throw new Error(error.message);
-      if (!data) throw new Error('Profil non trouvé');
-      return data;
-    },
-
-    getAll: async (): Promise<Profile[]> => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, first_name, last_name, email, phone, title, relationship_type, birth_date, birth_place, current_location, situation, avatar_url, photo_url, father_id, mother_id, is_admin, is_patriarch, created_at, updated_at')
-        .order('created_at', { ascending: false });
-
-      if (error) throw new Error(error.message);
-      return (data || []).map(item => ({
-        ...item,
-        father_id: item.father_id || null,
-        mother_id: item.mother_id || null
-      }));
-    },
-
-    createFromUserMetadata: async (user: any): Promise<Profile> => {
-      const metadata = user.user_metadata;
-      const profileData = {
-        id: user.id,
-        user_id: user.id,
-        email: user.email,
-        first_name: metadata.first_name || '',
-        last_name: metadata.last_name || '',
-        phone: metadata.phone || '',
-        title: metadata.title || 'Membre',
-        photo_url: metadata.photo_url || '',
-        birth_date: metadata.birth_date || null,
-        birth_place: metadata.birth_place || '',
-        current_location: metadata.current_location || '',
-        situation: metadata.situation || '',
-        is_patriarch: metadata.is_patriarch || false,
-        is_admin: metadata.is_admin || false,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-
-      const { data, error } = await supabase
-        .from('profiles')
-        .insert(profileData)
-        .select()
-        .single();
-
-      if (error) throw new Error(error.message);
-      return data;
-    },
-
-    getAll: async (): Promise<Profile[]> => {
-      try {
-        // Approche simplifiée : récupérer d'abord le profil de l'utilisateur actuel
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('Non authentifié');
-
-        // Récupérer le profil de l'utilisateur actuel
-        const { data: currentProfile, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('user_id', user.id)
-          .single();
-
-        if (profileError && profileError.code === 'PGRST116') {
-          // Profil n'existe pas, le créer
-          const newProfile = await api.profiles.createFromUserMetadata(user);
-          return [newProfile];
-        }
-
-        if (profileError) {
-          console.error('Erreur récupération profil:', profileError);
-          throw new Error('Impossible de récupérer le profil utilisateur');
-        }
-
-        // Si l'utilisateur est admin, récupérer tous les profils
-        if (currentProfile?.is_admin) {
-          const { data: allProfiles, error: allError } = await supabase
-            .from('profiles')
-            .select('*')
-            .order('created_at', { ascending: false });
-
-          if (allError) {
-            console.error('Erreur récupération tous les profils:', allError);
-            // En cas d'erreur, retourner au moins le profil de l'utilisateur
-            return currentProfile ? [currentProfile] : [];
-          }
-
-          return allProfiles || [];
-        }
-
-        // Si pas admin, retourner seulement le profil de l'utilisateur
-        return currentProfile ? [currentProfile] : [];
-      } catch (error) {
-        console.error('Erreur dans getAll:', error);
-        throw new Error(error instanceof Error ? error.message : 'Erreur inconnue');
-      }
-    },
-
-    getAllForAdmin: async (): Promise<Profile[]> => {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) throw new Error('Non authentifié');
-
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-
-      if (profileError && profileError.code === 'PGRST116') {
-        const userProfile = await api.profiles.createFromUserMetadata(user);
-        if (!userProfile?.is_admin) {
-          throw new Error('Accès refusé: Seuls les administrateurs peuvent voir tous les profils');
-        }
-      } else if (profileError) {
-        throw new Error('Impossible de vérifier les permissions administrateur');
-      } else if (!profileData?.is_admin) {
-        throw new Error('Accès refusé: Seuls les administrateurs peuvent voir tous les profils');
-      }
-
+    async getAll(): Promise<Profile[]> {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -150,267 +48,225 @@ export const api = {
       return data || [];
     },
 
-    update: async (id: string, updates: Partial<Profile>): Promise<Profile> => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw new Error(error.message);
-      if (!data) throw new Error('Profil non trouvé');
-      return data;
+    async getCurrent() {
+      const user = await api.getCurrentUser();
+      if (!user.data?.user) throw new Error('Utilisateur non connecté');
+      return this.getProfileById(user.data.user.id);
     },
 
-    getById: async (id: string): Promise<Profile> => {
+    async getProfileById(id: string): Promise<Profile> {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', id)
         .single();
 
-      if (error) throw new Error(error.message);
-      if (!data) throw new Error('Profil non trouvé');
+      if (error) {
+        console.error("Erreur lors de la récupération du profil :", error);
+        throw error;
+      }
+
       return data;
     },
 
-    delete: async (id: string): Promise<void> => {
-      const { error } = await supabase
+    async createProfile(profile: ProfileData) {
+      const data = {
+        ...profile,
+        relationship_type: profile.relationship_type?.toLowerCase() as Database['public']['Enums']['relationship_type'],
+        title: profile.title || 'Fils' as Database['public']['Enums']['family_title'],
+        father_name: profile.father_id || null,
+        mother_name: profile.mother_id || null
+      };
+      return supabase
         .from('profiles')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw new Error(error.message);
-    }
-  },
-
-  stats: {
-    getFamilyStats: async () => {
-      try {
-        const { data: profiles, error } = await supabase
-          .from('profiles')
-          .select('*');
-
-        if (error) {
-          return { totalMembers: 0, generations: 0, activeBranches: 0 };
-        }
-
-        const totalMembers = profiles?.length || 0;
-        const generations = new Set();
-        profiles?.forEach(profile => {
-          if (profile.title) {
-            if (profile.title.includes('Patriarche') || profile.title.includes('Matriarche')) {
-              generations.add('1');
-            } else if (profile.title.includes('Père') || profile.title.includes('Mère')) {
-              generations.add('2');
-            } else if (profile.title.includes('Fils') || profile.title.includes('Fille')) {
-              generations.add('3');
-            } else if (profile.title.includes('Petit-fils') || profile.title.includes('Petite-fille')) {
-              generations.add('4');
-            }
-          }
-        });
-
-        const activeBranches = profiles?.filter(profile => profile.is_patriarch === true).length || 0;
-
-        return {
-          totalMembers,
-          generations: generations.size,
-          activeBranches
-        };
-      } catch (error) {
-        return { totalMembers: 0, generations: 0, activeBranches: 0 };
-      }
-    }
-  },
-
-  admin: {
-    deleteAllUsers: async (password: string): Promise<{ success: boolean; message: string; deletedUsers: number }> => {
-      try {
-        const response = await fetch(`https://aaxfvyorhasbwlaovrdf.supabase.co/functions/v1/delete_all_users`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-admin-secret': password
-          },
-          body: JSON.stringify({ password })
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Erreur lors de la suppression de tous les utilisateurs');
-        }
-
-        const result = await response.json();
-        return result;
-      } catch (error) {
-        throw new Error(error instanceof Error ? error.message : 'Erreur inconnue');
-      }
+        .insert([data])
+        .select()
+        .single();
     },
 
-    deleteUser: async (userId: string): Promise<{ success: boolean; message: string }> => {
-      try {
-        const response = await fetch(`https://aaxfvyorhasbwlaovrdf.supabase.co/functions/v1/delete_user`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-admin-secret': '1432'
-          },
-          body: JSON.stringify({ userId })
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Erreur lors de la suppression de l\'utilisateur');
-        }
-
-        const result = await response.json();
-        return result;
-      } catch (error) {
-        throw new Error(error instanceof Error ? error.message : 'Erreur inconnue');
-      }
-    }
-  },
-
-  testConnection: async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (!user) {
-        return { success: false, error: 'Utilisateur non connecté' };
-      }
-
-      const { data: profile } = await supabase
+    async updateProfile(id: string, updates: UpdateProfile) {
+      const data = {
+        ...updates,
+        relationship_type: updates.relationship_type?.toLowerCase() as Database['public']['Enums']['relationship_type'],
+        title: updates.title || 'Fils' as Database['public']['Enums']['family_title']
+      };
+      return supabase
         .from('profiles')
-        .select('is_admin')
-        .eq('user_id', user.id)
+        .update(data)
+        .eq('id', id)
+        .select()
+        .single();
+    },
+
+    async createFromUserMetadata(user: any): Promise<Profile> {
+      const metadata = user.user_metadata;
+      const profileData = {
+        id: user.id,
+        user_id: user.id,
+        email: user.email,
+        first_name: metadata.first_name || '',
+        last_name: metadata.last_name || '',
+        phone: metadata.phone || '',
+        title: metadata.title || 'Fils' as Database['public']['Enums']['family_title'],
+        relationship_type: (metadata.relationship_type || 'fils').toLowerCase() as Database['public']['Enums']['relationship_type'],
+        photo_url: metadata.photo_url || '',
+        birth_date: metadata.birth_date || null,
+        birth_place: metadata.birth_place || '',
+        current_location: metadata.current_location || '',
+        situation: metadata.situation || '',
+        is_patriarch: metadata.is_patriarch || false,
+        is_admin: metadata.is_admin || false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        father_name: metadata.father_name || null,
+        mother_name: metadata.mother_name || null,
+      };
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .insert([profileData])
+        .select()
         .single();
 
-      const isAdmin = profile?.is_admin || false;
-
-      let canAccessAllProfiles = false;
-      if (isAdmin) {
-        const { data } = await supabase
-          .from('profiles')
-          .select('id')
-          .limit(1);
-        canAccessAllProfiles = !!data;
-      }
-
-      return {
-        success: true,
-        user: user.email,
-        isAdmin,
-        canAccessAllProfiles
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Erreur inconnue'
-      };
+      if (error) throw new Error(error.message);
+      return data;
     }
   },
 
-  blockUser: async (userId: string, isBlocked: boolean): Promise<void> => {
-    // NOTE: La colonne `is_blocked` n'existe pas dans le schéma `profiles`.
-    // La fonctionnalité est désactivée en attendant une migration de la base de données.
-    // const { error } = await supabase
-    //   .from('profiles')
-    //   .update({ is_blocked: isBlocked })
-    //   .eq('id', userId);
-    const { error } = await supabase
-      .from('profiles')
-      .update({ is_admin: !isBlocked })
-      .eq('id', userId);
-
-    // if (error) {
-    //   throw new Error(`Erreur lors du ${isBlocked ? 'blocage' : 'déblocage'} de l'utilisateur: ${error.message}`);
-    // }
-  },
-
-  toggleAdmin: async (userId: string, isAdmin: boolean): Promise<void> => {
-    const { error } = await supabase
-      .from('profiles')
-      .update({ is_admin: isAdmin })
-      .eq('id', userId);
-
-    if (error) {
-      throw new Error(`Erreur lors de la modification des privilèges admin: ${error.message}`);
-    }
-  },
-  createProfile: async (profile: any): Promise<any> => {
+  async uploadAvatar(userId: string, file: File): Promise<string> {
     try {
-      const { data: result, error: rpcError } = await supabase
-        .rpc('create_profile_safe', {
-          p_id: profile.id,
-          p_user_id: profile.user_id,
-          p_email: profile.email,
-          p_first_name: profile.first_name,
-          p_last_name: profile.last_name,
-          p_phone: profile.phone,
-          p_profession: profile.profession,
-          p_current_location: profile.current_location,
-          p_birth_place: profile.birth_place,
-          p_avatar_url: profile.avatar_url,
-          p_photo_url: profile.photo_url,
-          p_relationship_type: profile.relationship_type,
-          p_father_name: profile.father_name,
-          p_mother_name: profile.mother_name,
-          p_is_admin: profile.is_admin,
-          p_birth_date: profile.birth_date,
-          p_title: profile.title,
-          p_situation: profile.situation,
-          p_is_patriarch: profile.is_patriarch
+      const filePath = `avatars/${userId}/${file.name}`;
+
+      const { data, error } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
         });
 
-      if (rpcError) {
-        throw rpcError;
+      if (error) {
+        console.error('Erreur lors de l\'upload du fichier:', error);
+        throw error;
       }
 
-      if ((result as any)?.success) {
-        return (result as any).profile;
-      } else {
-        throw new Error((result as any)?.error || 'La création du profil a échoué via RPC.');
-      }
+      const publicURL = `https://aaxfvyorhasbwlaovrdf.supabase.co/storage/v1/object/public/${data.path}`;
+      return publicURL;
     } catch (error) {
-      throw new Error(error instanceof Error ? error.message : 'Erreur inconnue lors de la création du profil.');
+      console.error('Erreur lors de l\'upload de l\'avatar:', error);
+      throw error;
     }
   },
 
-  uploadAvatar: async (userId: string, file: File): Promise<string> => {
-    const filePath = `${userId}/${Date.now()}_${file.name}`;
+  async getAllProfiles(): Promise<Profile[]> {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-    const { data, error } = await supabase.storage
-      .from('avatars')
-      .upload(filePath, file, {
-        cacheControl: '3600',
-        upsert: true,
-        contentType: file.type
+      if (error) {
+        console.error('Erreur récupération tous les profils:', error);
+        throw error;
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Erreur récupération tous les profils:', error);
+      throw error;
+    }
+  },
+
+  async getAllForAdmin(): Promise<Profile[]> {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Erreur récupération profiles admin:', error);
+        throw error;
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Erreur récupération profiles admin:', error);
+      throw error;
+    }
+  },
+
+  async searchMembers(query: string): Promise<{ id: string; first_name: string; last_name: string; title?: string; }[]> {
+    try {
+      if (!query || query.length < 2) {
+        return [];
+      }
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, title')
+        .or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%`)
+        .limit(10);
+
+      if (error) {
+        console.error('Erreur lors de la recherche de membres:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Erreur lors de la recherche de membres:', error);
+      return [];
+    }
+  },
+
+  async deleteUser(userId: string) {
+    try {
+      // Supprimer l'utilisateur de l'authentification Supabase
+      const { error: authError } = await supabase.auth.admin.deleteUser(userId);
+
+      if (authError) {
+        console.error('Erreur lors de la suppression de l\'utilisateur (auth) :', authError);
+        throw authError;
+      }
+
+      // Supprimer le profil de la table "profiles"
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', userId);
+
+      if (profileError) {
+        console.error('Erreur lors de la suppression du profil :', profileError);
+        throw profileError;
+      }
+
+      return { success: true, message: 'Utilisateur supprimé avec succès.' };
+    } catch (error) {
+      console.error('Erreur lors de la suppression de l\'utilisateur :', error);
+      return { success: false, message: 'Erreur lors de la suppression de l\'utilisateur.' };
+    }
+  },
+
+  async deleteAllUsers(password: string) {
+    try {
+      const response = await fetch(`https://aaxfvyorhasbwlaovrdf.supabase.co/functions/v1/delete_all_users`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+        },
+        body: JSON.stringify({ password }),
       });
 
-    if (error) {
-      throw new Error(error.message);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Erreur lors de la suppression:', error);
+      throw error;
     }
-
-    const { data: publicUrlData } = supabase.storage
-      .from('avatars')
-      .getPublicUrl(filePath, {
-        download: false,
-        transform: {
-          width: 200,
-          height: 200,
-          resize: 'cover'
-        }
-      });
-
-    if (!publicUrlData.publicUrl) {
-      throw new Error('Impossible de générer l\'URL publique');
-    }
-
-    return publicUrlData.publicUrl;
-  }
+  },
 };

@@ -12,11 +12,13 @@ export const useFamilyMembers = () => {
     try {
       setIsLoading(true);
       setError(null);
-      
+
       const data = await api.profiles.getAll();
-      
+
       const familyMembers: FamilyMember[] = data.map(profile => ({
         id: profile.id,
+        profile_id: profile.id,
+        tree_id: 1, // Default tree ID
         first_name: profile.first_name,
         last_name: profile.last_name,
         email: profile.email,
@@ -29,15 +31,15 @@ export const useFamilyMembers = () => {
         situation: profile.situation,
         avatar_url: profile.avatar_url || profile.photo_url,
         photo_url: profile.photo_url,
-        father_id: profile.father_id,
-        mother_id: profile.mother_id,
+        father_id: profile.father_name, // Map father_name to father_id for compatibility
+        mother_id: profile.mother_name, // Map mother_name to mother_id for compatibility
         is_admin: profile.is_admin,
         is_patriarch: profile.is_patriarch,
         created_at: profile.created_at,
         updated_at: profile.updated_at,
         connections: [] // Initialize connections as empty array
       }));
-      
+
       setMembers(familyMembers);
     } catch (err) {
       console.error('Erreur lors de la récupération des membres:', err);
@@ -50,18 +52,19 @@ export const useFamilyMembers = () => {
   const addMember = useCallback(async (memberData: Partial<FamilyMember>) => {
     try {
       setIsLoading(true);
-      const result = await api.createProfile({
+      const result = await api.profiles.createProfile({
         id: crypto.randomUUID(),
-        email: memberData.email,
-        first_name: memberData.first_name,
-        last_name: memberData.last_name,
+        user_id: crypto.randomUUID(),
+        email: memberData.email || '',
+        first_name: memberData.first_name || '',
+        last_name: memberData.last_name || '',
         phone: memberData.phone,
         current_location: memberData.current_location,
         birth_place: memberData.birth_place,
         avatar_url: memberData.avatar_url,
         relationship_type: memberData.relationship_type,
-        father_id: memberData.father_id,
-        mother_id: memberData.mother_id,
+        father_id: memberData.father_id, // This will be mapped to father_name in the API
+        mother_id: memberData.mother_id, // This will be mapped to mother_name in the API
         is_admin: memberData.is_admin || false,
         birth_date: memberData.birth_date,
         title: memberData.title,

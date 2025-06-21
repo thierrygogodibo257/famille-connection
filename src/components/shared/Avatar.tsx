@@ -1,77 +1,80 @@
 
-import { useState } from 'react';
-import { User } from 'lucide-react';
+import React from 'react';
 import { cn } from '@/lib/utils';
 
 interface AvatarProps {
-  src?: string;
-  alt?: string;
+  src?: string | null;
+  fallback?: string;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
-  fallback?: string;
 }
 
-export const Avatar = ({ src, alt, size = 'md', className, fallback }: AvatarProps) => {
-  const [imageError, setImageError] = useState(false);
-
+export const Avatar: React.FC<AvatarProps> = ({ 
+  src, 
+  fallback = '?', 
+  size = 'md', 
+  className 
+}) => {
   const sizeClasses = {
-    sm: 'w-8 h-8',
-    md: 'w-12 h-12',
-    lg: 'w-16 h-16',
-    xl: 'w-24 h-24'
+    sm: 'w-8 h-8 text-sm',
+    md: 'w-12 h-12 text-base',
+    lg: 'w-20 h-20 text-xl',
+    xl: 'w-32 h-32 text-3xl'
   };
 
-  const iconSizes = {
-    sm: 'w-4 h-4',
-    md: 'w-6 h-6',
-    lg: 'w-8 h-8',
-    xl: 'w-12 h-12'
+  // Vérifier si l'URL est valide et accessible
+  const isValidImageUrl = (url: string | null | undefined): boolean => {
+    if (!url || typeof url !== 'string') return false;
+    
+    // Vérifier si c'est une URL Supabase valide
+    if (url.includes('supabase.co/storage/v1/object/public/avatars/')) {
+      return true;
+    }
+    
+    // Vérifier si c'est une URL data valide
+    if (url.startsWith('data:image/')) {
+      return true;
+    }
+    
+    // Vérifier si c'est une URL HTTP/HTTPS valide
+    try {
+      new URL(url);
+      return url.startsWith('http://') || url.startsWith('https://');
+    } catch {
+      return false;
+    }
   };
 
-  const getImageUrl = (url?: string) => {
-    if (!url) return null;
-    
-    // Si l'URL commence par http, la retourner telle quelle
-    if (url.startsWith('http')) {
-      return url;
-    }
-    
-    // Si c'est un chemin relatif Supabase storage, construire l'URL complète
-    if (url.includes('avatars/')) {
-      return `https://aaxfvyorhasbwlaovrdf.supabase.co/storage/v1/object/public/${url}`;
-    }
-    
-    // Si c'est juste un nom de fichier, l'ajouter au bucket avatars
-    if (url && !url.includes('/')) {
-      return `https://aaxfvyorhasbwlaovrdf.supabase.co/storage/v1/object/public/avatars/${url}`;
-    }
-    
-    return url;
-  };
-
-  const imageUrl = getImageUrl(src);
+  const showImage = isValidImageUrl(src);
 
   return (
     <div className={cn(
-      'relative rounded-full overflow-hidden bg-gradient-to-br from-whatsapp-100 to-whatsapp-200 flex items-center justify-center border-2 border-white shadow-md',
+      'rounded-full bg-gradient-to-br from-whatsapp-400 to-whatsapp-600 flex items-center justify-center text-white font-semibold overflow-hidden',
       sizeClasses[size],
       className
     )}>
-      {imageUrl && !imageError ? (
-        <img
-          src={imageUrl}
-          alt={alt || 'Avatar'}
+      {showImage ? (
+        <img 
+          src={src!} 
+          alt="Avatar" 
           className="w-full h-full object-cover"
-          onError={() => setImageError(true)}
-          onLoad={() => console.log(`Avatar loaded: ${imageUrl}`)}
+          onError={(e) => {
+            // En cas d'erreur de chargement, masquer l'image et afficher le fallback
+            e.currentTarget.style.display = 'none';
+            if (e.currentTarget.nextSibling) {
+              (e.currentTarget.nextSibling as HTMLElement).style.display = 'flex';
+            }
+          }}
         />
-      ) : fallback ? (
-        <div className="flex items-center justify-center w-full h-full bg-gradient-to-br from-whatsapp-400 to-whatsapp-500 text-white font-semibold">
-          {fallback.slice(0, 2).toUpperCase()}
-        </div>
-      ) : (
-        <User className={cn('text-whatsapp-600', iconSizes[size])} />
-      )}
+      ) : null}
+      <div 
+        className={cn(
+          'w-full h-full flex items-center justify-center',
+          showImage ? 'hidden' : 'flex'
+        )}
+      >
+        {fallback}
+      </div>
     </div>
   );
 };

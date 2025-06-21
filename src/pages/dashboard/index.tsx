@@ -48,7 +48,7 @@ const Dashboard = () => {
     const fetchUserProfile = async () => {
       if (user) {
         try {
-          const profile = await api.profiles.getCurrent();
+          const profile = await api.getProfileById(user.id);
           setUserProfile(profile);
         } catch (error) {
           console.error('Erreur lors de la récupération du profil:', error);

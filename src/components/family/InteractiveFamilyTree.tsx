@@ -69,10 +69,11 @@ export const InteractiveFamilyTree = () => {
     level: number,
     position: { x: number; y: number }
   ): TreeNode => {
-    // Trouver les enfants de ce membre
+    // Trouver les enfants de ce membre en utilisant father_id et mother_id
+    // qui contiennent maintenant les noms des parents
     const children: TreeNode[] = [];
     const childMembers = Array.from(memberMap.values()).filter(potentialChild =>
-      potentialChild.father_id === member.id || potentialChild.mother_id === member.id
+      potentialChild.father_id === member.first_name || potentialChild.mother_id === member.first_name
     );
 
     // Calculer les positions des enfants
