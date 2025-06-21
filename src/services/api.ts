@@ -56,13 +56,51 @@ export const api = {
     },
 
     getAll: async (): Promise<Profile[]> => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
+      try {
+        // Approche simplifiée : récupérer d'abord le profil de l'utilisateur actuel
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Non authentifié');
 
-      if (error) throw new Error(error.message);
-      return data || [];
+        // Récupérer le profil de l'utilisateur actuel
+        const { data: currentProfile, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+
+        if (profileError && profileError.code === 'PGRST116') {
+          // Profil n'existe pas, le créer
+          const newProfile = await api.profiles.createFromUserMetadata(user);
+          return [newProfile];
+        }
+
+        if (profileError) {
+          console.error('Erreur récupération profil:', profileError);
+          throw new Error('Impossible de récupérer le profil utilisateur');
+        }
+
+        // Si l'utilisateur est admin, récupérer tous les profils
+        if (currentProfile?.is_admin) {
+          const { data: allProfiles, error: allError } = await supabase
+            .from('profiles')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+          if (allError) {
+            console.error('Erreur récupération tous les profils:', allError);
+            // En cas d'erreur, retourner au moins le profil de l'utilisateur
+            return currentProfile ? [currentProfile] : [];
+          }
+
+          return allProfiles || [];
+        }
+
+        // Si pas admin, retourner seulement le profil de l'utilisateur
+        return currentProfile ? [currentProfile] : [];
+      } catch (error) {
+        console.error('Erreur dans getAll:', error);
+        throw new Error(error instanceof Error ? error.message : 'Erreur inconnue');
+      }
     },
 
     getAllForAdmin: async (): Promise<Profile[]> => {

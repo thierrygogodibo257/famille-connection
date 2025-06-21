@@ -157,7 +157,7 @@ const Dashboard = () => {
             <UserAvatar
               user={userProfile}
               size="lg"
-              className="w-30 h-30 ring-2 ring-purple-200"
+              className="w-20 h-20 ring-2 ring-purple-200"
             />
             <div className="flex-1">
               <h3 className="text-lg font-semibold text-gray-900">
