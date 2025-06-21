@@ -133,6 +133,84 @@ export const api = {
     }
   },
 
+  stats: {
+    async getFamilyStats() {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*');
+
+        if (error) throw error;
+
+        const totalMembers = data?.length || 0;
+
+        // Calculer les générations basées sur les relations
+        const generations = this.calculateGenerations(data || []);
+
+        // Calculer les branches actives (membres avec des enfants)
+        const activeBranches = this.calculateActiveBranches(data || []);
+
+        return {
+          totalMembers,
+          generations,
+          activeBranches
+        };
+      } catch (error) {
+        console.error('Erreur lors du calcul des statistiques:', error);
+        return {
+          totalMembers: 0,
+          generations: 0,
+          activeBranches: 0
+        };
+      }
+    },
+
+    calculateGenerations(members: Profile[]): number {
+      if (members.length === 0) return 0;
+
+      // Trouver les racines (membres sans parents)
+      const roots = members.filter(member =>
+        !member.father_name && !member.mother_name
+      );
+
+      if (roots.length === 0) return 1; // Au moins une génération
+
+      // Calculer la profondeur maximale
+      const maxDepth = Math.max(...roots.map(root =>
+        this.getMemberDepth(root, members)
+      ));
+
+      return Math.max(1, maxDepth);
+    },
+
+    getMemberDepth(member: Profile, allMembers: Profile[], visited = new Set<string>()): number {
+      if (visited.has(member.id)) return 0;
+      visited.add(member.id);
+
+      // Trouver les enfants de ce membre
+      const children = allMembers.filter(m =>
+        m.father_name === member.first_name || m.mother_name === member.first_name
+      );
+
+      if (children.length === 0) return 1;
+
+      const maxChildDepth = Math.max(...children.map(child =>
+        this.getMemberDepth(child, allMembers, visited)
+      ));
+
+      return 1 + maxChildDepth;
+    },
+
+    calculateActiveBranches(members: Profile[]): number {
+      return members.filter(member => {
+        // Un membre a une branche active s'il a des enfants
+        return members.some(m =>
+          m.father_name === member.first_name || m.mother_name === member.first_name
+        );
+      }).length;
+    }
+  },
+
   async uploadAvatar(userId: string, file: File): Promise<string> {
     try {
       const filePath = `avatars/${userId}/${file.name}`;

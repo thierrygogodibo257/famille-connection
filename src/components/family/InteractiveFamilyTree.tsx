@@ -1,7 +1,7 @@
 import { useCallback, useState, useEffect } from 'react';
 import { FamilyMember } from '@/types/family';
 import { useFamilyMembers } from '@/hooks/useFamilyMembers';
-import { Loader2, Calendar, MapPin, Crown, Star } from 'lucide-react';
+import { Loader2, Calendar, MapPin, Crown, Star, Users, User, Move } from 'lucide-react';
 import { UserAvatar } from '@/components/shared/UserAvatar';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -21,25 +21,24 @@ interface TreeNode {
     currentLocation?: string;
     situation?: string;
   };
-  birthDate?: string;
-  currentLocation?: string;
-  situation?: string;
   children?: TreeNode[];
   level: number;
   position: { x: number; y: number };
-  x: number;
-  y: number;
   connections?: string[];
 }
 
 export const InteractiveFamilyTree = () => {
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
   const [treeData, setTreeData] = useState<TreeNode | null>(null);
+  const [draggedNode, setDraggedNode] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const { members, isLoading, error } = useFamilyMembers();
 
   // Fonction pour construire l'arbre familial
   const buildTree = useCallback((members: FamilyMember[]): TreeNode | null => {
     if (members.length === 0) return null;
+
+    console.log('[InteractiveFamilyTree] Building tree with members:', members);
 
     // Créer un map pour accès rapide aux membres
     const memberMap = new Map<string, FamilyMember>();
@@ -51,14 +50,17 @@ export const InteractiveFamilyTree = () => {
       (member.title?.toLowerCase().includes('patriarche') || member.title?.toLowerCase().includes('matriarche'))
     );
 
-    // Si pas de patriarche/matriarche, trouver le plus ancien membre
-    const oldestMember = members.reduce((oldest, current) => {
-      const oldestDate = new Date(oldest.birth_date || '2999-12-31');
-      const currentDate = new Date(current.birth_date || '2999-12-31');
-      return currentDate < oldestDate ? current : oldest;
-    }, members[0]);
+    console.log('[InteractiveFamilyTree] Patriarch found:', patriarch);
 
-    const rootMember = patriarch || oldestMember;
+    // Si pas de patriarche/matriarche, prendre le premier membre
+    const rootMember = patriarch || members[0];
+
+    if (!rootMember) {
+      console.log('[InteractiveFamilyTree] No root member found');
+      return null;
+    }
+
+    console.log('[InteractiveFamilyTree] Root member:', rootMember);
 
     return buildNodeFromMember(rootMember, memberMap, 0, { x: 0, y: 0 });
   }, []);
@@ -69,12 +71,20 @@ export const InteractiveFamilyTree = () => {
     level: number,
     position: { x: number; y: number }
   ): TreeNode => {
+    console.log(`[InteractiveFamilyTree] Building node for member: ${member.first_name} ${member.last_name}`);
+
     // Trouver les enfants de ce membre en utilisant father_id et mother_id
     // qui contiennent maintenant les noms des parents
     const children: TreeNode[] = [];
-    const childMembers = Array.from(memberMap.values()).filter(potentialChild =>
-      potentialChild.father_id === member.first_name || potentialChild.mother_id === member.first_name
-    );
+    const childMembers = Array.from(memberMap.values()).filter(potentialChild => {
+      const isChild = potentialChild.father_id === member.first_name || potentialChild.mother_id === member.first_name;
+      if (isChild) {
+        console.log(`[InteractiveFamilyTree] Found child: ${potentialChild.first_name} ${potentialChild.last_name} for parent: ${member.first_name}`);
+      }
+      return isChild;
+    });
+
+    console.log(`[InteractiveFamilyTree] Found ${childMembers.length} children for ${member.first_name}`);
 
     // Calculer les positions des enfants
     const childSpacing = 200;
@@ -111,22 +121,35 @@ export const InteractiveFamilyTree = () => {
         x: position.x,
         y: position.y
       },
-      x: position.x,
-      y: position.y,
-      connections: member.connections || [] // Ajout des connexions
+      connections: member.connections || []
     };
   };
 
   useEffect(() => {
+    console.log('[InteractiveFamilyTree] Members changed:', members);
     if (members.length > 0) {
       const tree = buildTree(members);
+      console.log('[InteractiveFamilyTree] Built tree:', tree);
       setTreeData(tree);
+    } else {
+      setTreeData(null);
     }
   }, [members, buildTree]);
+
+  const handleDragStart = (nodeId: string) => {
+    setDraggedNode(nodeId);
+    setIsDragging(true);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedNode(null);
+    setIsDragging(false);
+  };
 
   const renderNode = (node: TreeNode) => {
     const isSelected = selectedNode === node.id;
     const isPatriarch = node.is_patriarch || node.title?.toLowerCase().includes('patriarche') || node.title?.toLowerCase().includes('matriarche');
+    const isBeingDragged = draggedNode === node.id;
 
     // Créer un objet utilisateur pour UserAvatar
     const userData = {
@@ -140,21 +163,32 @@ export const InteractiveFamilyTree = () => {
     return (
       <motion.div
         key={node.id}
-        className="absolute"
+        className="absolute cursor-move"
         style={{
           left: `${node.position.x}px`,
           top: `${node.position.y}px`,
-          transform: 'translate(-50%, -50%)'
+          transform: 'translate(-50%, -50%)',
+          zIndex: isBeingDragged ? 1000 : node.level
         }}
         initial={{ scale: 0, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
+        animate={{
+          scale: isBeingDragged ? 1.1 : 1,
+          opacity: 1,
+          x: isBeingDragged ? 0 : 0,
+          y: isBeingDragged ? 0 : 0
+        }}
         transition={{
           duration: 0.5,
           delay: node.level * 0.1,
           type: "spring",
           stiffness: 200
         }}
-        whileHover={{ scale: 1.05 }}
+        whileHover={{ scale: isBeingDragged ? 1.1 : 1.05 }}
+        drag
+        dragMomentum={false}
+        dragElastic={0.1}
+        onDragStart={() => handleDragStart(node.id)}
+        onDragEnd={handleDragEnd}
         onClick={() => setSelectedNode(isSelected ? null : node.id)}
       >
         {/* Connecteurs vers les enfants */}
@@ -195,6 +229,18 @@ export const InteractiveFamilyTree = () => {
             </motion.div>
           )}
 
+          {/* Badge de déplacement */}
+          <motion.div
+            className="absolute -top-2 -right-2 z-10"
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 0.7 }}
+            transition={{ delay: 1 + node.level * 0.1 }}
+          >
+            <div className="bg-blue-500 text-white p-1 rounded-full shadow-lg">
+              <Move className="w-3 h-3" />
+            </div>
+          </motion.div>
+
           {/* Bulle principale */}
           <motion.div
             className={`
@@ -207,10 +253,14 @@ export const InteractiveFamilyTree = () => {
                 ? 'bg-gradient-to-br from-yellow-100 via-yellow-200 to-yellow-300'
                 : 'bg-gradient-to-br from-white via-gray-50 to-gray-100'
               }
+              ${isBeingDragged
+                ? 'ring-4 ring-blue-400 shadow-2xl'
+                : ''
+              }
               backdrop-blur-sm
             `}
             whileHover={{
-              scale: 1.05,
+              scale: isBeingDragged ? 1.1 : 1.05,
               boxShadow: "0 20px 40px rgba(0,0,0,0.1)"
             }}
           >
@@ -238,6 +288,21 @@ export const InteractiveFamilyTree = () => {
                   ]
                 }}
                 transition={{ duration: 2, repeat: Infinity }}
+              />
+            )}
+
+            {/* Bordure animée pour le drag */}
+            {isBeingDragged && (
+              <motion.div
+                className="absolute inset-0 rounded-full border-2 border-blue-400"
+                animate={{
+                  boxShadow: [
+                    "0 0 0 0 rgba(59, 130, 246, 0.7)",
+                    "0 0 0 10px rgba(59, 130, 246, 0)",
+                    "0 0 0 0 rgba(59, 130, 246, 0)"
+                  ]
+                }}
+                transition={{ duration: 1, repeat: Infinity }}
               />
             )}
           </motion.div>
@@ -316,12 +381,12 @@ export const InteractiveFamilyTree = () => {
     );
   }
 
-  if (!treeData) {
+  if (!members || members.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center space-y-4">
           <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mx-auto">
-            <span className="text-gray-400 text-2xl">👨‍👩‍👧‍👦</span>
+            <Users className="w-12 h-12 text-gray-400" />
           </div>
           <div className="space-y-2">
             <p className="text-gray-600 font-medium">Aucune donnée familiale trouvée</p>
@@ -332,37 +397,149 @@ export const InteractiveFamilyTree = () => {
     );
   }
 
-  return (
-    <div className="w-full h-screen bg-gradient-to-br from-slate-50 via-green-50 to-emerald-50 relative overflow-hidden">
-      {/* Définition du gradient pour les connecteurs */}
-      <svg width="0" height="0" className="absolute">
-        <defs>
-          <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#10B981" stopOpacity="0.6" />
-            <stop offset="50%" stopColor="#059669" stopOpacity="0.8" />
-            <stop offset="100%" stopColor="#047857" stopOpacity="0.6" />
-          </linearGradient>
-        </defs>
-      </svg>
+  // Si on a un arbre complexe, l'afficher, sinon afficher la grille interactive
+  if (treeData && treeData.children && treeData.children.length > 0) {
+    return (
+      <div className="w-full h-screen bg-gradient-to-br from-slate-50 via-green-50 to-emerald-50 relative overflow-hidden">
+        {/* Définition du gradient pour les connecteurs */}
+        <svg width="0" height="0" className="absolute">
+          <defs>
+            <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#10B981" stopOpacity="0.6" />
+              <stop offset="50%" stopColor="#059669" stopOpacity="0.8" />
+              <stop offset="100%" stopColor="#047857" stopOpacity="0.6" />
+            </linearGradient>
+          </defs>
+        </svg>
 
-      {/* Conteneur de l'arbre avec centrage automatique */}
-      <div className="relative w-full h-full flex items-center justify-center">
-        <div className="relative">
-          {renderTreeNodes(treeData)}
+        {/* Conteneur de l'arbre avec centrage automatique */}
+        <div className="relative w-full h-full flex items-center justify-center">
+          <div className="relative">
+            {renderTreeNodes(treeData)}
+          </div>
+        </div>
+
+        {/* Légende */}
+        <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg">
+          <div className="flex items-center space-x-4 text-sm">
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 rounded-full bg-gradient-to-br from-yellow-100 to-yellow-300 border-2 border-yellow-400"></div>
+              <span>Patriarche/Matriarche</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 rounded-full bg-gradient-to-br from-white to-gray-100 border-2 border-gray-300"></div>
+              <span>Membre</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Move className="w-3 h-3 text-blue-500" />
+              <span>Déplacer</span>
+            </div>
+          </div>
         </div>
       </div>
+    );
+  }
 
-      {/* Légende */}
-      <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg">
-        <div className="flex items-center space-x-4 text-sm">
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 rounded-full bg-gradient-to-br from-yellow-100 to-yellow-300 border-2 border-yellow-400"></div>
-            <span>Patriarche/Matriarche</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 rounded-full bg-gradient-to-br from-white to-gray-100 border-2 border-gray-300"></div>
-            <span>Membre</span>
-          </div>
+  // Affichage en grille interactive (différent de la page membres)
+  return (
+    <div className="w-full min-h-screen bg-gradient-to-br from-slate-50 via-green-50 to-emerald-50">
+      <div className="container mx-auto py-8">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Arbre Familial Interactif</h1>
+          <p className="text-gray-600">Déplacez les membres pour organiser votre arbre généalogique</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 p-6">
+          {members.map((member, index) => {
+            const isPatriarch = member.is_patriarch || member.title?.toLowerCase().includes('patriarche') || member.title?.toLowerCase().includes('matriarche');
+
+            const userData = {
+              avatar_url: member.avatar_url,
+              photo_url: member.photo_url,
+              first_name: member.first_name,
+              last_name: member.last_name,
+              email: member.email
+            };
+
+            return (
+              <motion.div
+                key={member.id}
+                className="relative"
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{
+                  duration: 0.5,
+                  delay: index * 0.1,
+                  type: "spring",
+                  stiffness: 200
+                }}
+                whileHover={{ scale: 1.05 }}
+                drag
+                dragMomentum={false}
+                dragElastic={0.1}
+              >
+                <div className="bg-white rounded-lg shadow-lg p-6 text-center hover:shadow-xl transition-shadow cursor-move">
+                  {/* Badge Patriarche/Matriarche */}
+                  {isPatriarch && (
+                    <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 z-10">
+                      <div className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg flex items-center space-x-1">
+                        <Crown className="w-3 h-3" />
+                        <span>{member.title}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Badge de déplacement */}
+                  <div className="absolute -top-2 -right-2 z-10">
+                    <div className="bg-blue-500 text-white p-1 rounded-full shadow-lg">
+                      <Move className="w-3 h-3" />
+                    </div>
+                  </div>
+
+                  {/* Avatar */}
+                  <div className="relative mb-4">
+                    <div className="w-24 h-24 mx-auto">
+                      <UserAvatar
+                        user={userData}
+                        size="lg"
+                        className="w-full h-full ring-4 ring-whatsapp-200"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Informations */}
+                  <h3 className="font-bold text-gray-900 text-lg mb-1">
+                    {member.first_name} {member.last_name}
+                  </h3>
+                  <p className="text-whatsapp-600 font-medium text-sm mb-2">
+                    {member.title || 'Membre'}
+                  </p>
+
+                  {member.situation && (
+                    <p className="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded-full mb-2">
+                      {member.situation}
+                    </p>
+                  )}
+
+                  <div className="space-y-1 text-xs text-gray-600">
+                    {member.birth_date && (
+                      <div className="flex items-center justify-center space-x-1">
+                        <Calendar className="w-3 h-3" />
+                        <span>{new Date(member.birth_date).toLocaleDateString('fr-FR')}</span>
+                      </div>
+                    )}
+
+                    {member.current_location && (
+                      <div className="flex items-center justify-center space-x-1">
+                        <MapPin className="w-3 h-3" />
+                        <span>{member.current_location}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
         </div>
       </div>
     </div>

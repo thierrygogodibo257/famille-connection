@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { api } from '@/services/api';
 import type { FamilyMember } from '@/types/family';
 
@@ -40,6 +40,7 @@ export const useFamilyMembers = () => {
         connections: [] // Initialize connections as empty array
       }));
 
+      console.log('[useFamilyMembers] Fetched members:', familyMembers);
       setMembers(familyMembers);
     } catch (err) {
       console.error('Erreur lors de la récupération des membres:', err);
@@ -48,6 +49,11 @@ export const useFamilyMembers = () => {
       setIsLoading(false);
     }
   }, []);
+
+  // Charger les membres automatiquement au montage
+  useEffect(() => {
+    fetchMembers();
+  }, [fetchMembers]);
 
   const addMember = useCallback(async (memberData: Partial<FamilyMember>) => {
     try {

@@ -12,18 +12,12 @@ export function FamilyTree() {
 
   useEffect(() => {
     console.log('FamilyTree mounted', { user, session, authLoading });
-    if (user) {
-      fetchMembers();
-    }
-  }, [user, session, authLoading, fetchMembers]);
-
-  useEffect(() => {
     console.log('[FamilyTree] Members:', members);
     if (members.length > 0) {
       console.log(`[FamilyTree] Number of members: ${members.length}`);
       console.log('[FamilyTree] First member:', members[0]);
     }
-  }, [members]);
+  }, [user, session, authLoading, members]);
 
   const isAdmin = user?.user_metadata?.is_admin || false;
 

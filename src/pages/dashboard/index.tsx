@@ -48,7 +48,7 @@ const Dashboard = () => {
     const fetchUserProfile = async () => {
       if (user) {
         try {
-          const profile = await api.getProfileById(user.id);
+          const profile = await api.profiles.getProfileById(user.id);
           setUserProfile(profile);
         } catch (error) {
           console.error('Erreur lors de la récupération du profil:', error);
@@ -155,22 +155,28 @@ const Dashboard = () => {
         >
           <div className="flex items-center space-x-4 mb-4">
             <UserAvatar
-              user={userProfile}
+              user={userProfile || {
+                first_name: user?.user_metadata?.first_name || 'Utilisateur',
+                last_name: user?.user_metadata?.last_name || '',
+                email: user?.email || '',
+                avatar_url: user?.user_metadata?.photo_url,
+                photo_url: user?.user_metadata?.photo_url
+              }}
               size="lg"
               className="w-20 h-20 ring-2 ring-purple-200"
             />
             <div className="flex-1">
               <h3 className="text-lg font-semibold text-gray-900">
-                {userProfile?.first_name} {userProfile?.last_name}
+                {userProfile?.first_name || user?.user_metadata?.first_name || 'Utilisateur'} {userProfile?.last_name || user?.user_metadata?.last_name || ''}
               </h3>
               <p className="text-sm text-gray-600 flex items-center">
                 <Mail className="w-3 h-3 mr-1" />
-                {userProfile?.email}
+                {userProfile?.email || user?.email}
               </p>
-              {userProfile?.phone && (
+              {(userProfile?.phone || user?.user_metadata?.phone) && (
                 <p className="text-sm text-gray-600 flex items-center">
                   <Phone className="w-3 h-3 mr-1" />
-                  {userProfile.phone}
+                  {userProfile?.phone || user?.user_metadata?.phone}
                 </p>
               )}
             </div>
@@ -192,13 +198,13 @@ const Dashboard = () => {
 
           {/* Badge Patriarche ou Affiliation */}
           <div className="mt-2 flex items-center justify-center">
-            {userProfile?.is_patriarch ? (
+            {(userProfile?.is_patriarch || user?.user_metadata?.is_patriarch) ? (
               <span className="px-4 py-1 rounded-full bg-gradient-to-r from-yellow-400 to-yellow-600 text-white font-bold shadow-lg text-md border-2 border-yellow-300 animate-bounce-in-3d">
                 Patriarche
               </span>
-            ) : userProfile?.relationship_type ? (
+            ) : (userProfile?.relationship_type || user?.user_metadata?.relationship_type) ? (
               <span className="px-3 py-1 rounded-full bg-gradient-to-r from-blue-400 to-blue-600 text-white font-semibold shadow text-sm border border-blue-300 animate-bounce-in-3d">
-                {userProfile.relationship_type.charAt(0).toUpperCase() + userProfile.relationship_type.slice(1)}
+                {(userProfile?.relationship_type || user?.user_metadata?.relationship_type).charAt(0).toUpperCase() + (userProfile?.relationship_type || user?.user_metadata?.relationship_type).slice(1)}
               </span>
             ) : null}
           </div>
