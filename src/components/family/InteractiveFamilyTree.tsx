@@ -44,26 +44,72 @@ export const InteractiveFamilyTree = () => {
     const memberMap = new Map<string, FamilyMember>();
     members.forEach(member => memberMap.set(member.id, member));
 
-    // Trouver le patriarche ou matriarche (priorité patriarche)
-    const patriarch = members.find(member =>
-      member.is_patriarch === true ||
-      (member.title?.toLowerCase().includes('patriarche') || member.title?.toLowerCase().includes('matriarche'))
+    // Vérifier s'il y a des relations parent-enfant
+    const hasRelations = members.some(member =>
+      member.father_id || member.mother_id
     );
 
-    console.log('[InteractiveFamilyTree] Patriarch found:', patriarch);
+    if (hasRelations) {
+      // Si des relations existent, construire l'arbre hiérarchique
+      const patriarch = members.find(member =>
+        member.is_patriarch === true ||
+        (member.title?.toLowerCase().includes('patriarche') || member.title?.toLowerCase().includes('matriarche'))
+      );
 
-    // Si pas de patriarche/matriarche, prendre le premier membre
-    const rootMember = patriarch || members[0];
+      console.log('[InteractiveFamilyTree] Patriarch found:', patriarch);
 
-    if (!rootMember) {
-      console.log('[InteractiveFamilyTree] No root member found');
-      return null;
+      // Si pas de patriarche/matriarche, prendre le premier membre sans parents
+      const rootMember = patriarch || members.find(m => !m.father_id && !m.mother_id) || members[0];
+
+      if (!rootMember) {
+        console.log('[InteractiveFamilyTree] No root member found');
+        return null;
+      }
+
+      console.log('[InteractiveFamilyTree] Root member:', rootMember);
+      return buildNodeFromMember(rootMember, memberMap, 0, { x: 0, y: 0 });
+    } else {
+      // Si pas de relations, créer un arbre plat avec tous les membres
+      console.log('[InteractiveFamilyTree] No relations found, creating flat tree');
+      return buildFlatTree(members);
     }
-
-    console.log('[InteractiveFamilyTree] Root member:', rootMember);
-
-    return buildNodeFromMember(rootMember, memberMap, 0, { x: 0, y: 0 });
   }, []);
+
+  const buildFlatTree = (members: FamilyMember[]): TreeNode => {
+    // Créer un nœud racine virtuel qui contient tous les membres
+    const rootNode: TreeNode = {
+      id: 'root',
+      name: 'Famille',
+      title: 'Famille',
+      level: 0,
+      position: { x: 0, y: 0 },
+      children: members.map((member, index) => ({
+        id: member.id,
+        name: `${member.first_name} ${member.last_name}`,
+        title: member.title || 'Membre',
+        avatar_url: member.avatar_url,
+        photo_url: member.photo_url,
+        first_name: member.first_name,
+        last_name: member.last_name,
+        email: member.email,
+        is_patriarch: member.is_patriarch,
+        is_admin: member.is_admin,
+        attributes: {
+          birthDate: member.birth_date,
+          currentLocation: member.current_location,
+          situation: member.situation
+        },
+        level: 1,
+        position: {
+          x: (index - (members.length - 1) / 2) * 250,
+          y: 250
+        },
+        connections: member.connections || []
+      }))
+    };
+
+    return rootNode;
+  };
 
   const buildNodeFromMember = (
     member: FamilyMember,
@@ -447,9 +493,12 @@ export const InteractiveFamilyTree = () => {
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Arbre Familial Interactif</h1>
           <p className="text-gray-600">Déplacez les membres pour organiser votre arbre généalogique</p>
+          <p className="text-sm text-gray-500 mt-2">
+            {members.length} membre{members.length > 1 ? 's' : ''} trouvé{members.length > 1 ? 's' : ''}
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 p-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4 p-6">
           {members.map((member, index) => {
             const isPatriarch = member.is_patriarch || member.title?.toLowerCase().includes('patriarche') || member.title?.toLowerCase().includes('matriarche');
 
@@ -478,61 +527,61 @@ export const InteractiveFamilyTree = () => {
                 dragMomentum={false}
                 dragElastic={0.1}
               >
-                <div className="bg-white rounded-lg shadow-lg p-6 text-center hover:shadow-xl transition-shadow cursor-move">
+                <div className="bg-white rounded-lg shadow-lg p-3 text-center hover:shadow-xl transition-shadow cursor-move">
                   {/* Badge Patriarche/Matriarche */}
                   {isPatriarch && (
-                    <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 z-10">
-                      <div className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg flex items-center space-x-1">
-                        <Crown className="w-3 h-3" />
-                        <span>{member.title}</span>
+                    <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 z-10">
+                      <div className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-white px-2 py-0.5 rounded-full text-xs font-bold shadow-lg flex items-center space-x-1">
+                        <Crown className="w-2 h-2" />
+                        <span className="text-xs">{member.title}</span>
                       </div>
                     </div>
                   )}
 
                   {/* Badge de déplacement */}
-                  <div className="absolute -top-2 -right-2 z-10">
-                    <div className="bg-blue-500 text-white p-1 rounded-full shadow-lg">
-                      <Move className="w-3 h-3" />
+                  <div className="absolute -top-1 -right-1 z-10">
+                    <div className="bg-blue-500 text-white p-0.5 rounded-full shadow-lg">
+                      <Move className="w-2 h-2" />
                     </div>
                   </div>
 
                   {/* Avatar */}
-                  <div className="relative mb-4">
-                    <div className="w-24 h-24 mx-auto">
+                  <div className="relative mb-2">
+                    <div className="w-12 h-12 mx-auto">
                       <UserAvatar
                         user={userData}
-                        size="lg"
-                        className="w-full h-full ring-4 ring-whatsapp-200"
+                        size="md"
+                        className="w-full h-full ring-2 ring-whatsapp-200"
                       />
                     </div>
                   </div>
 
                   {/* Informations */}
-                  <h3 className="font-bold text-gray-900 text-lg mb-1">
+                  <h3 className="font-bold text-gray-900 text-sm mb-1 truncate">
                     {member.first_name} {member.last_name}
                   </h3>
-                  <p className="text-whatsapp-600 font-medium text-sm mb-2">
+                  <p className="text-whatsapp-600 font-medium text-xs mb-1 truncate">
                     {member.title || 'Membre'}
                   </p>
 
                   {member.situation && (
-                    <p className="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded-full mb-2">
+                    <p className="text-xs text-gray-600 bg-gray-100 px-1 py-0.5 rounded-full mb-1 truncate">
                       {member.situation}
                     </p>
                   )}
 
-                  <div className="space-y-1 text-xs text-gray-600">
+                  <div className="space-y-0.5 text-xs text-gray-600">
                     {member.birth_date && (
                       <div className="flex items-center justify-center space-x-1">
-                        <Calendar className="w-3 h-3" />
-                        <span>{new Date(member.birth_date).toLocaleDateString('fr-FR')}</span>
+                        <Calendar className="w-2 h-2" />
+                        <span className="text-xs">{new Date(member.birth_date).toLocaleDateString('fr-FR')}</span>
                       </div>
                     )}
 
                     {member.current_location && (
                       <div className="flex items-center justify-center space-x-1">
-                        <MapPin className="w-3 h-3" />
-                        <span>{member.current_location}</span>
+                        <MapPin className="w-2 h-2" />
+                        <span className="text-xs truncate">{member.current_location}</span>
                       </div>
                     )}
                   </div>

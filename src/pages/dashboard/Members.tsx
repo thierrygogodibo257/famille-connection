@@ -42,7 +42,7 @@ const Members = () => {
         filtered = filtered.filter(member => member.is_patriarch);
         break;
       case 'recent':
-        filtered = filtered.sort((a, b) => 
+        filtered = filtered.sort((a, b) =>
           new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime()
         ).slice(0, 10);
         break;
@@ -75,7 +75,7 @@ const Members = () => {
         <div>
           <h1 className="text-3xl font-bold">Membres de la famille</h1>
           <p className="text-gray-600 mt-2">
-            {filteredMembers.length} membre{filteredMembers.length !== 1 ? 's' : ''} 
+            {filteredMembers.length} membre{filteredMembers.length !== 1 ? 's' : ''}
             {searchTerm && ` trouvé${filteredMembers.length !== 1 ? 's' : ''} pour "${searchTerm}"`}
           </p>
         </div>
@@ -96,11 +96,12 @@ const Members = () => {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
           {filteredMembers.map((member) => (
             <MemberCard
               key={member.id}
               member={member}
+              variant="compact"
               isAdmin={isAdmin}
               onDelete={fetchMembers}
             />

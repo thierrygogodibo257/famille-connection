@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar } from '@/components/shared/Avatar';
-import { Camera, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Camera, Eye, EyeOff, Loader2, Check, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { ProfileData } from '@/types/profile';
@@ -21,6 +21,8 @@ export const FamilyRegisterForm = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [profilePhoto, setProfilePhoto] = useState<string>('');
+  const [showPhotoConfirm, setShowPhotoConfirm] = useState(false);
+  const [tempPhoto, setTempPhoto] = useState<string>('');
   const navigate = useNavigate();
   const { toast } = useToast();
   const [role, setRole] = useState<'Membre' | 'Administrateur'>('Membre');
@@ -84,10 +86,31 @@ export const FamilyRegisterForm = () => {
       const reader = new FileReader();
       reader.onload = (event) => {
         const result = event.target?.result as string;
-        setProfilePhoto(result);
-        methods.setValue('photoUrl', result);
+        setTempPhoto(result);
+        setShowPhotoConfirm(true);
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const confirmPhoto = () => {
+    setProfilePhoto(tempPhoto);
+    methods.setValue('photoUrl', tempPhoto);
+    setShowPhotoConfirm(false);
+    setTempPhoto('');
+    toast({
+      title: "Photo confirmée",
+      description: "Votre photo de profil a été sélectionnée avec succès.",
+    });
+  };
+
+  const cancelPhoto = () => {
+    setShowPhotoConfirm(false);
+    setTempPhoto('');
+    // Réinitialiser l'input file
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.value = '';
     }
   };
 
@@ -244,8 +267,38 @@ export const FamilyRegisterForm = () => {
       console.log('Données du profil à créer:', profileData);
 
       try {
-        await api.createProfile(profileData);
-        console.log('Profil créé avec succès');
+        // Vérifier si le profil existe déjà
+        try {
+          const existingProfile = await api.profiles.getProfileById(signInData.user.id);
+          console.log('Profil existant trouvé, mise à jour...');
+
+          // Mettre à jour le profil existant avec les nouvelles données
+          await api.profiles.updateProfile(signInData.user.id, {
+            first_name: data.firstName,
+            last_name: data.lastName,
+            phone: data.phone ? `${data.phoneCode}${data.phone}` : '',
+            profession: data.profession || '',
+            current_location: data.currentLocation || '',
+            birth_place: data.birthPlace || '',
+            photo_url: avatarUrl,
+            title: profileTitle,
+            relationship_type: data.relationship as RelationshipType,
+            father_name: data.fatherName || '',
+            mother_name: data.motherName || '',
+            birth_date: data.birthDate || null,
+            situation: '',
+          });
+        } catch (profileError) {
+          // Si le profil n'existe pas, le créer
+          if (profileError.code === 'PGRST116') {
+            console.log('Profil non trouvé, création...');
+            await api.profiles.createProfile(profileData);
+          } else {
+            throw profileError;
+          }
+        }
+
+        console.log('Profil créé/mis à jour avec succès');
       } catch (error) {
         console.error('Erreur détaillée lors de la création du profil:', error);
         if (error.message.includes('fetch') || error.message.includes('network')) {
@@ -316,6 +369,48 @@ export const FamilyRegisterForm = () => {
             </div>
             <p className="text-xs text-gray-500">Photo de profil (optionnel)</p>
           </div>
+
+          {/* Popup de confirmation de photo */}
+          <Dialog open={showPhotoConfirm} onOpenChange={setShowPhotoConfirm}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Confirmer la photo de profil</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="text-center">
+                  <div className="flex justify-center mb-4">
+                    <Avatar
+                      src={tempPhoto}
+                      size="xl"
+                      fallback="?"
+                    />
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    Voulez-vous utiliser cette photo comme photo de profil ?
+                  </p>
+                </div>
+                <div className="flex justify-end space-x-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={cancelPhoto}
+                    className="flex items-center space-x-2"
+                  >
+                    <X className="w-4 h-4" />
+                    <span>Annuler</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={confirmPhoto}
+                    className="flex items-center space-x-2 bg-whatsapp-500 hover:bg-whatsapp-600"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>Confirmer</span>
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
 
           {/* Civilité */}
           <div>

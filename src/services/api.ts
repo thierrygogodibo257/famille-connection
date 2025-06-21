@@ -63,6 +63,80 @@ export const api = {
 
       if (error) {
         console.error("Erreur lors de la récupération du profil :", error);
+
+        // Si le profil n'existe pas, essayer de le créer à partir des métadonnées utilisateur
+        if (error.code === 'PGRST116') {
+          console.log("Profil non trouvé, tentative de création automatique...");
+
+          // Récupérer les informations de l'utilisateur
+          const { data: userData, error: userError } = await supabase.auth.getUser();
+
+          if (userError || !userData.user) {
+            throw new Error('Utilisateur non connecté');
+          }
+
+          const user = userData.user;
+          const metadata = user.user_metadata;
+
+          // Créer le profil automatiquement avec des données minimales
+          const profileData = {
+            id: user.id,
+            user_id: user.id,
+            email: user.email,
+            first_name: metadata.first_name || 'Utilisateur',
+            last_name: metadata.last_name || '',
+            phone: metadata.phone || '',
+            title: metadata.title || 'Fils' as Database['public']['Enums']['family_title'],
+            relationship_type: (metadata.relationship_type || 'fils').toLowerCase() as Database['public']['Enums']['relationship_type'],
+            photo_url: metadata.photo_url || '',
+            avatar_url: metadata.photo_url || '',
+            birth_date: metadata.birth_date || null,
+            birth_place: metadata.birth_place || '',
+            current_location: metadata.current_location || '',
+            situation: metadata.situation || '',
+            profession: metadata.profession || '',
+            is_patriarch: metadata.is_patriarch || false,
+            is_admin: metadata.is_admin || false,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            father_name: metadata.father_name || null,
+            mother_name: metadata.mother_name || null,
+          };
+
+          try {
+            const { data: newProfile, error: createError } = await supabase
+              .from('profiles')
+              .insert([profileData])
+              .select()
+              .single();
+
+            if (createError) {
+              console.error("Erreur lors de la création automatique du profil :", createError);
+              // Si c'est un conflit de clé primaire, essayer de récupérer le profil existant
+              if (createError.code === '23505') {
+                console.log("Profil déjà existant, tentative de récupération...");
+                const { data: existingProfile, error: fetchError } = await supabase
+                  .from('profiles')
+                  .select('*')
+                  .eq('id', id)
+                  .single();
+
+                if (fetchError) {
+                  throw fetchError;
+                }
+                return existingProfile;
+              }
+              throw createError;
+            }
+
+            console.log("Profil créé automatiquement avec succès");
+            return newProfile;
+          } catch (createError) {
+            console.error("Erreur lors de la création automatique du profil :", createError);
+            throw createError;
+          }
+        }
+
         throw error;
       }
 
@@ -70,18 +144,34 @@ export const api = {
     },
 
     async createProfile(profile: ProfileData) {
-      const data = {
-        ...profile,
-        relationship_type: profile.relationship_type?.toLowerCase() as Database['public']['Enums']['relationship_type'],
-        title: profile.title || 'Fils' as Database['public']['Enums']['family_title'],
-        father_name: profile.father_id || null,
-        mother_name: profile.mother_id || null
-      };
-      return supabase
-        .from('profiles')
-        .insert([data])
-        .select()
-        .single();
+      try {
+        const data = {
+          ...profile,
+          relationship_type: profile.relationship_type?.toLowerCase() as Database['public']['Enums']['relationship_type'],
+          title: profile.title || 'Fils' as Database['public']['Enums']['family_title'],
+          father_name: profile.father_name || null,
+          mother_name: profile.mother_name || null
+        };
+
+        console.log('Données à insérer dans la base:', data);
+
+        const { data: result, error } = await supabase
+          .from('profiles')
+          .insert([data])
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Erreur lors de la création du profil:', error);
+          throw error;
+        }
+
+        console.log('Profil créé avec succès:', result);
+        return { data: result, error: null };
+      } catch (error) {
+        console.error('Erreur dans createProfile:', error);
+        throw error;
+      }
     },
 
     async updateProfile(id: string, updates: UpdateProfile) {
@@ -136,31 +226,80 @@ export const api = {
   stats: {
     async getFamilyStats() {
       try {
+        console.log('[getFamilyStats] Début du calcul des statistiques');
+
         const { data, error } = await supabase
           .from('profiles')
           .select('*');
 
-        if (error) throw error;
+        if (error) {
+          console.error('[getFamilyStats] Erreur lors de la récupération des profils:', error);
+          throw error;
+        }
 
-        const totalMembers = data?.length || 0;
+        const members = data || [];
+        console.log('[getFamilyStats] Nombre de membres récupérés:', members.length);
+        console.log('[getFamilyStats] Membres:', members.map(m => ({ id: m.id, name: `${m.first_name} ${m.last_name}`, title: m.title })));
+
+        const totalMembers = members.length;
 
         // Calculer les générations basées sur les relations
-        const generations = this.calculateGenerations(data || []);
+        const generations = this.calculateGenerations(members);
+        console.log('[getFamilyStats] Générations calculées:', generations);
 
         // Calculer les branches actives (membres avec des enfants)
-        const activeBranches = this.calculateActiveBranches(data || []);
+        const activeBranches = this.calculateActiveBranches(members);
+        console.log('[getFamilyStats] Branches actives calculées:', activeBranches);
 
-        return {
+        // Nouvelles métriques
+        const stats = {
           totalMembers,
           generations,
-          activeBranches
+          activeBranches,
+          // Statistiques par genre/titre
+          patriarchs: members.filter(m => m.is_patriarch || m.title?.toLowerCase().includes('patriarche')).length,
+          matriarchs: members.filter(m => m.title?.toLowerCase().includes('matriarche')).length,
+          admins: members.filter(m => m.is_admin).length,
+          // Statistiques par âge
+          averageAge: this.calculateAverageAge(members),
+          ageDistribution: this.calculateAgeDistribution(members),
+          // Statistiques par localisation
+          locations: this.getLocationStats(members),
+          // Statistiques par statut
+          statusDistribution: this.getStatusDistribution(members),
+          // Statistiques par relation
+          relationshipDistribution: this.getRelationshipDistribution(members),
+          // Statistiques temporelles
+          recentMembers: members.filter(m => {
+            const createdDate = new Date(m.created_at);
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            return createdDate > thirtyDaysAgo;
+          }).length,
+          // Statistiques de connectivité
+          connectedMembers: this.calculateConnectedMembers(members),
+          isolatedMembers: this.calculateIsolatedMembers(members)
         };
+
+        console.log('[getFamilyStats] Statistiques calculées:', stats);
+        return stats;
       } catch (error) {
-        console.error('Erreur lors du calcul des statistiques:', error);
+        console.error('[getFamilyStats] Erreur lors du calcul des statistiques:', error);
         return {
           totalMembers: 0,
           generations: 0,
-          activeBranches: 0
+          activeBranches: 0,
+          patriarchs: 0,
+          matriarchs: 0,
+          admins: 0,
+          averageAge: 0,
+          ageDistribution: {},
+          locations: {},
+          statusDistribution: {},
+          relationshipDistribution: {},
+          recentMembers: 0,
+          connectedMembers: 0,
+          isolatedMembers: 0
         };
       }
     },
@@ -208,7 +347,96 @@ export const api = {
           m.father_name === member.first_name || m.mother_name === member.first_name
         );
       }).length;
-    }
+    },
+
+    calculateAverageAge(members: Profile[]): number {
+      const membersWithAge = members.filter(m => m.birth_date);
+      if (membersWithAge.length === 0) return 0;
+
+      const totalAge = membersWithAge.reduce((sum, member) => {
+        const birthDate = new Date(member.birth_date!);
+        const today = new Date();
+        const age = today.getFullYear() - birthDate.getFullYear();
+        return sum + age;
+      }, 0);
+
+      return Math.round(totalAge / membersWithAge.length);
+    },
+
+    calculateAgeDistribution(members: Profile[]): Record<string, number> {
+      const distribution: Record<string, number> = {
+        '0-18': 0,
+        '19-30': 0,
+        '31-50': 0,
+        '51-70': 0,
+        '70+': 0
+      };
+
+      members.forEach(member => {
+        if (member.birth_date) {
+          const birthDate = new Date(member.birth_date);
+          const today = new Date();
+          const age = today.getFullYear() - birthDate.getFullYear();
+
+          if (age <= 18) distribution['0-18']++;
+          else if (age <= 30) distribution['19-30']++;
+          else if (age <= 50) distribution['31-50']++;
+          else if (age <= 70) distribution['51-70']++;
+          else distribution['70+']++;
+        }
+      });
+
+      return distribution;
+    },
+
+    getLocationStats(members: Profile[]): Record<string, number> {
+      const locations: Record<string, number> = {};
+
+      members.forEach(member => {
+        if (member.current_location) {
+          const location = member.current_location.trim();
+          if (location) {
+            locations[location] = (locations[location] || 0) + 1;
+          }
+        }
+      });
+
+      return locations;
+    },
+
+    getStatusDistribution(members: Profile[]): Record<string, number> {
+      const status: Record<string, number> = {};
+
+      members.forEach(member => {
+        const memberStatus = member.situation || 'Non spécifié';
+        status[memberStatus] = (status[memberStatus] || 0) + 1;
+      });
+
+      return status;
+    },
+
+    getRelationshipDistribution(members: Profile[]): Record<string, number> {
+      const relationships: Record<string, number> = {};
+
+      members.forEach(member => {
+        const relationship = member.relationship_type || 'Non spécifié';
+        relationships[relationship] = (relationships[relationship] || 0) + 1;
+      });
+
+      return relationships;
+    },
+
+    calculateConnectedMembers(members: Profile[]): number {
+      return members.filter(member =>
+        member.father_name || member.mother_name
+      ).length;
+    },
+
+    calculateIsolatedMembers(members: Profile[]): number {
+      return members.filter(member =>
+        !member.father_name && !member.mother_name
+      ).length;
+    },
   },
 
   async uploadAvatar(userId: string, file: File): Promise<string> {
@@ -227,7 +455,12 @@ export const api = {
         throw error;
       }
 
-      const publicURL = `https://aaxfvyorhasbwlaovrdf.supabase.co/storage/v1/object/public/${data.path}`;
+      // Construire l'URL publique correctement
+      const publicURL = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath).data.publicUrl;
+
+      console.log('URL publique générée:', publicURL);
       return publicURL;
     } catch (error) {
       console.error('Erreur lors de l\'upload de l\'avatar:', error);

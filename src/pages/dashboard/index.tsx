@@ -7,11 +7,23 @@ import { useAuth } from '@/hooks/useAuth';
 import { UserAvatar } from '@/components/shared/UserAvatar';
 import { ROUTES } from '@/lib/constants/routes';
 import { api } from '@/services/api';
+import { StatsChart } from '@/components/dashboard/StatsChart';
 
 interface FamilyStats {
   totalMembers: number;
   generations: number;
   activeBranches: number;
+  patriarchs: number;
+  matriarchs: number;
+  admins: number;
+  averageAge: number;
+  ageDistribution: Record<string, number>;
+  locations: Record<string, number>;
+  statusDistribution: Record<string, number>;
+  relationshipDistribution: Record<string, number>;
+  recentMembers: number;
+  connectedMembers: number;
+  isolatedMembers: number;
 }
 
 const Dashboard = () => {
@@ -21,30 +33,55 @@ const Dashboard = () => {
   const [stats, setStats] = useState<FamilyStats>({
     totalMembers: 0,
     generations: 0,
-    activeBranches: 0
+    activeBranches: 0,
+    patriarchs: 0,
+    matriarchs: 0,
+    admins: 0,
+    averageAge: 0,
+    ageDistribution: {},
+    locations: {},
+    statusDistribution: {},
+    relationshipDistribution: {},
+    recentMembers: 0,
+    connectedMembers: 0,
+    isolatedMembers: 0
   });
   const [loading, setLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<any>(null);
+  const [statsError, setStatsError] = useState<string | null>(null);
+
+  const fetchStats = async () => {
+    try {
+      setLoading(true);
+      setStatsError(null);
+      const familyStats = await api.stats.getFamilyStats();
+      setStats(familyStats);
+    } catch (error) {
+      console.error('Erreur lors du chargement des statistiques:', error);
+      setStatsError('Erreur lors du chargement des statistiques');
+      // En cas d'erreur, on garde les valeurs par défaut (0)
+      setStats({
+        totalMembers: 0,
+        generations: 0,
+        activeBranches: 0,
+        patriarchs: 0,
+        matriarchs: 0,
+        admins: 0,
+        averageAge: 0,
+        ageDistribution: {},
+        locations: {},
+        statusDistribution: {},
+        relationshipDistribution: {},
+        recentMembers: 0,
+        connectedMembers: 0,
+        isolatedMembers: 0
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        setLoading(true);
-        const familyStats = await api.stats.getFamilyStats();
-        setStats(familyStats);
-      } catch (error) {
-        console.error('Erreur lors du chargement des statistiques:', error);
-        // En cas d'erreur, on garde les valeurs par défaut (0)
-        setStats({
-          totalMembers: 0,
-          generations: 0,
-          activeBranches: 0
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
     const fetchUserProfile = async () => {
       if (user) {
         try {
@@ -69,6 +106,13 @@ const Dashboard = () => {
 
     fetchStats();
     fetchUserProfile();
+
+    // Rafraîchir les statistiques toutes les 5 minutes
+    const statsInterval = setInterval(fetchStats, 5 * 60 * 1000);
+
+    return () => {
+      clearInterval(statsInterval);
+    };
   }, [user]);
 
   const dashboardItems = [
@@ -243,29 +287,152 @@ const Dashboard = () => {
 
       {/* Section Statistiques */}
       <div className="mt-12">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">
-          Statistiques de la Famille
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="p-6 text-center">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-gray-900">
+            Statistiques de la Famille
+          </h2>
+          <button
+            onClick={fetchStats}
+            disabled={loading}
+            className="flex items-center space-x-2 px-4 py-2 bg-whatsapp-500 text-white rounded-lg hover:bg-whatsapp-600 transition-colors disabled:opacity-50"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            <span>{loading ? 'Chargement...' : 'Actualiser'}</span>
+          </button>
+        </div>
+
+        {/* Message d'erreur */}
+        {statsError && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="text-red-700">{statsError}</span>
+              </div>
+              <button
+                onClick={fetchStats}
+                className="text-red-600 hover:text-red-800 text-sm font-medium"
+              >
+                Réessayer
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Statistiques principales */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <Card className="p-6 text-center hover-lift transition-all duration-300">
             <div className="text-3xl font-bold text-whatsapp-600 mb-2">
-              {loading ? '...' : stats.totalMembers}
+              {loading ? (
+                <div className="animate-pulse bg-whatsapp-200 h-8 w-16 mx-auto rounded"></div>
+              ) : (
+                stats.totalMembers
+              )}
             </div>
             <div className="text-gray-600">Membres Totaux</div>
+            {stats.recentMembers > 0 && (
+              <div className="text-xs text-green-600 mt-1">
+                +{stats.recentMembers} ce mois
+              </div>
+            )}
           </Card>
-          <Card className="p-6 text-center">
+          <Card className="p-6 text-center hover-lift transition-all duration-300">
             <div className="text-3xl font-bold text-blue-600 mb-2">
-              {loading ? '...' : stats.generations}
+              {loading ? (
+                <div className="animate-pulse bg-blue-200 h-8 w-16 mx-auto rounded"></div>
+              ) : (
+                stats.generations
+              )}
             </div>
             <div className="text-gray-600">Générations</div>
+            {stats.averageAge > 0 && (
+              <div className="text-xs text-blue-600 mt-1">
+                Âge moyen: {stats.averageAge} ans
+              </div>
+            )}
           </Card>
-          <Card className="p-6 text-center">
+          <Card className="p-6 text-center hover-lift transition-all duration-300">
             <div className="text-3xl font-bold text-emerald-600 mb-2">
-              {loading ? '...' : stats.activeBranches}
+              {loading ? (
+                <div className="animate-pulse bg-emerald-200 h-8 w-16 mx-auto rounded"></div>
+              ) : (
+                stats.activeBranches
+              )}
             </div>
             <div className="text-gray-600">Branches Actives</div>
+            <div className="text-xs text-emerald-600 mt-1">
+              {stats.connectedMembers} connectés
+            </div>
           </Card>
         </div>
+
+        {/* Statistiques détaillées */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <Card className="p-4 text-center hover-lift transition-all duration-300">
+            <div className="text-2xl font-bold text-yellow-600 mb-1">
+              {loading ? '...' : stats.patriarchs}
+            </div>
+            <div className="text-sm text-gray-600">Patriarches</div>
+          </Card>
+          <Card className="p-4 text-center hover-lift transition-all duration-300">
+            <div className="text-2xl font-bold text-purple-600 mb-1">
+              {loading ? '...' : stats.matriarchs}
+            </div>
+            <div className="text-sm text-gray-600">Matriarches</div>
+          </Card>
+          <Card className="p-4 text-center hover-lift transition-all duration-300">
+            <div className="text-2xl font-bold text-red-600 mb-1">
+              {loading ? '...' : stats.admins}
+            </div>
+            <div className="text-sm text-gray-600">Administrateurs</div>
+          </Card>
+          <Card className="p-4 text-center hover-lift transition-all duration-300">
+            <div className="text-2xl font-bold text-orange-600 mb-1">
+              {loading ? '...' : stats.isolatedMembers}
+            </div>
+            <div className="text-sm text-gray-600">Membres Isolés</div>
+          </Card>
+        </div>
+
+        {/* Distribution par âge */}
+        {Object.keys(stats.ageDistribution).length > 0 && (
+          <div className="mb-8">
+            <StatsChart
+              title="Distribution par Âge"
+              data={stats.ageDistribution}
+              color="bg-indigo-500"
+              maxBars={5}
+            />
+          </div>
+        )}
+
+        {/* Top localisations */}
+        {Object.keys(stats.locations).length > 0 && (
+          <div className="mb-8">
+            <StatsChart
+              title="Localisations Principales"
+              data={stats.locations}
+              color="bg-green-500"
+              maxBars={6}
+            />
+          </div>
+        )}
+
+        {/* Distribution par relation */}
+        {Object.keys(stats.relationshipDistribution).length > 0 && (
+          <div className="mb-8">
+            <StatsChart
+              title="Types de Relations"
+              data={stats.relationshipDistribution}
+              color="bg-teal-500"
+              maxBars={8}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

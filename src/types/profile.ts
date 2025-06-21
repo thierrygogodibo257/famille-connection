@@ -36,6 +36,7 @@ export interface UpdateProfileData {
 }
 
 export interface ProfileData {
+  id?: string;
   user_id: string;
   email: string;
   first_name: string;
@@ -56,7 +57,5 @@ export interface ProfileData {
   is_patriarch: boolean;
   created_at: string;
   updated_at: string;
-  spouse_id?: string;
-  father_id?: string;
-  mother_id?: string;
+  spouse_name?: string;
 }

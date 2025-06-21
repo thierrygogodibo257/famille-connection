@@ -34,7 +34,7 @@ export const MemberCard = ({
     return (
       <div
         className={cn(
-          'p-4 rounded-xl bg-white/90 backdrop-blur-sm border border-gray-200 cursor-pointer transition-all duration-300 hover:shadow-lg hover:-translate-y-1',
+          'p-3 rounded-lg bg-white/90 backdrop-blur-sm border border-gray-200 cursor-pointer transition-all duration-300 hover:shadow-md hover:-translate-y-0.5',
           isSelected && 'ring-2 ring-whatsapp-500 border-whatsapp-300',
           'animate-fade-in'
         )}
@@ -43,16 +43,22 @@ export const MemberCard = ({
         <div className="flex items-center space-x-3">
           <UserAvatar
             user={userData}
-            size="md"
+            size="sm"
+            className="flex-shrink-0"
           />
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-gray-900 truncate">
+            <h3 className="font-semibold text-gray-900 text-sm truncate">
               {member.first_name} {member.last_name}
             </h3>
-            <p className="text-sm text-whatsapp-600 truncate">{member.title}</p>
+            <p className="text-xs text-whatsapp-600 truncate mb-1">{member.title}</p>
+            {member.situation && (
+              <p className="text-xs text-gray-500 bg-gray-50 px-2 py-0.5 rounded-full inline-block">
+                {member.situation}
+              </p>
+            )}
           </div>
           {isAdmin && (
-            <div onClick={(e) => e.stopPropagation()}>
+            <div onClick={(e) => e.stopPropagation()} className="flex-shrink-0">
               <DeleteUserButton
                 userId={member.id}
                 userName={`${member.first_name} ${member.last_name}`}
