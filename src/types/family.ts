@@ -19,6 +19,7 @@ export interface FamilyMember {
   is_patriarch?: boolean;
   created_at?: string;
   updated_at?: string;
+  connections?: string[];
 }
 
 export interface ProfileData {

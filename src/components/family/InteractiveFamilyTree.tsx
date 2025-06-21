@@ -21,9 +21,15 @@ interface TreeNode {
     currentLocation?: string;
     situation?: string;
   };
+  birthDate?: string;
+  currentLocation?: string;
+  situation?: string;
   children?: TreeNode[];
   level: number;
   position: { x: number; y: number };
+  x: number;
+  y: number;
+  connections?: string[];
 }
 
 export const InteractiveFamilyTree = () => {
@@ -31,6 +37,7 @@ export const InteractiveFamilyTree = () => {
   const [treeData, setTreeData] = useState<TreeNode | null>(null);
   const { members, isLoading, error } = useFamilyMembers();
 
+  // Fonction pour construire l'arbre familial
   const buildTree = useCallback((members: FamilyMember[]): TreeNode | null => {
     if (members.length === 0) return null;
 
@@ -41,16 +48,19 @@ export const InteractiveFamilyTree = () => {
     // Trouver le patriarche ou matriarche (priorité patriarche)
     const patriarch = members.find(member =>
       member.is_patriarch === true ||
-      member.title?.toLowerCase().includes('patriarche') ||
-      member.title?.toLowerCase().includes('matriarche')
+      (member.title?.toLowerCase().includes('patriarche') || member.title?.toLowerCase().includes('matriarche'))
     );
 
-    if (!patriarch) {
-      // Si pas de patriarche/matriarche, prendre le premier membre
-      return buildNodeFromMember(members[0], memberMap, 0, { x: 0, y: 0 });
-    }
+    // Si pas de patriarche/matriarche, trouver le plus ancien membre
+    const oldestMember = members.reduce((oldest, current) => {
+      const oldestDate = new Date(oldest.birth_date || '2999-12-31');
+      const currentDate = new Date(current.birth_date || '2999-12-31');
+      return currentDate < oldestDate ? current : oldest;
+    }, members[0]);
 
-    return buildNodeFromMember(patriarch, memberMap, 0, { x: 0, y: 0 });
+    const rootMember = patriarch || oldestMember;
+
+    return buildNodeFromMember(rootMember, memberMap, 0, { x: 0, y: 0 });
   }, []);
 
   const buildNodeFromMember = (
@@ -62,7 +72,7 @@ export const InteractiveFamilyTree = () => {
     // Trouver les enfants de ce membre
     const children: TreeNode[] = [];
     const childMembers = Array.from(memberMap.values()).filter(potentialChild =>
-      potentialChild.father_name === member.first_name || potentialChild.mother_name === member.first_name
+      potentialChild.father_id === member.id || potentialChild.mother_id === member.id
     );
 
     // Calculer les positions des enfants
@@ -94,9 +104,15 @@ export const InteractiveFamilyTree = () => {
         currentLocation: member.current_location,
         situation: member.situation
       },
-      children: children.length > 0 ? children : undefined,
+      children,
       level,
-      position
+      position: {
+        x: position.x,
+        y: position.y
+      },
+      x: position.x,
+      y: position.y,
+      connections: member.connections || [] // Ajout des connexions
     };
   };
 

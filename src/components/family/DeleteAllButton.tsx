@@ -51,6 +51,10 @@ export const DeleteAllButton: React.FC<DeleteAllButtonProps> = ({
       return;
     }
 
+    if (!window.confirm('Êtes-vous sûr de vouloir supprimer TOUS les utilisateurs ? Cette action est irréversible.')) {
+      return;
+    }
+
     setIsDeleting(true);
 
     try {
