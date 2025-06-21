@@ -306,46 +306,27 @@ export type Database = {
     }
     Functions: {
       create_profile_safe: {
-        Args:
-          | {
-              p_id: string
-              p_email: string
-              p_first_name: string
-              p_last_name: string
-              p_phone?: string
-              p_current_location?: string
-              p_birth_place?: string
-              p_avatar_url?: string
-              p_relationship_type?: string
-              p_father_id?: string
-              p_mother_id?: string
-              p_is_admin?: boolean
-              p_birth_date?: string
-              p_title?: string
-              p_situation?: string
-              p_is_patriarch?: boolean
-            }
-          | {
-              p_id: string
-              p_user_id: string
-              p_email: string
-              p_first_name: string
-              p_last_name: string
-              p_phone?: string
-              p_profession?: string
-              p_current_location?: string
-              p_birth_place?: string
-              p_avatar_url?: string
-              p_photo_url?: string
-              p_relationship_type?: Database["public"]["Enums"]["relationship_type"]
-              p_father_name?: string
-              p_mother_name?: string
-              p_is_admin?: boolean
-              p_birth_date?: string
-              p_title?: Database["public"]["Enums"]["family_title"]
-              p_situation?: string
-              p_is_patriarch?: boolean
-            }
+        Args: {
+          p_id: string
+          p_user_id: string
+          p_email: string
+          p_first_name: string
+          p_last_name: string
+          p_phone?: string
+          p_profession?: string
+          p_current_location?: string
+          p_birth_place?: string
+          p_avatar_url?: string
+          p_photo_url?: string
+          p_relationship_type?: Database["public"]["Enums"]["relationship_type"]
+          p_father_name?: string
+          p_mother_name?: string
+          p_is_admin?: boolean
+          p_birth_date?: string
+          p_title?: Database["public"]["Enums"]["family_title"]
+          p_situation?: string
+          p_is_patriarch?: boolean
+        }
         Returns: Json
       }
       is_current_user_admin: {
@@ -397,6 +378,7 @@ export type Database = {
         | "époux"
         | "épouse"
         | "patriarche"
+        | "matriarche"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -556,6 +538,7 @@ export const Constants = {
         "époux",
         "épouse",
         "patriarche",
+        "matriarche",
       ],
     },
   },

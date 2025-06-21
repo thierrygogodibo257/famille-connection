@@ -1,83 +1,77 @@
-import React, { useEffect, useState } from 'react';
-import { Combobox } from '@/components/ui/combobox';
-import { useFormContext } from 'react-hook-form';
-import { supabase } from '@/integrations/supabase/client';
-import { RelationshipType } from '@/lib/validations/relationshipSchema';
 
-type Option = {
-  value: string;
-  label: string;
-};
+import React, { useState, useCallback, useEffect } from 'react';
+import { useFormContext } from 'react-hook-form';
+import { Combobox } from '@/components/ui/combobox';
+import { api } from '@/services/api';
+import { useToast } from '@/hooks/use-toast';
 
 interface ComboboxMembreProps {
   name: string;
   placeholder?: string;
-  relationship?: string;
 }
 
-export const ComboboxMembre = ({
-  name,
-  placeholder = "Sélectionnez un membre",
-  relationship
-}: ComboboxMembreProps) => {
+interface Member {
+  id: string;
+  first_name: string;
+  last_name: string;
+  title?: string;
+}
+
+export const ComboboxMembre: React.FC<ComboboxMembreProps> = ({ 
+  name, 
+  placeholder = "Rechercher un membre..." 
+}) => {
   const { setValue, watch } = useFormContext();
-  const [options, setOptions] = useState<Option[]>([]);
-  const [open, setOpen] = useState(false);
+  const { toast } = useToast();
+  const [members, setMembers] = useState<Member[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  const currentValue = watch(name);
 
-  useEffect(() => {
-    const fetchMembers = async () => {
-      try {
-        // Query plus simple pour éviter les problèmes de RLS
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('id, first_name, last_name, title')
-          .order('created_at', { ascending: false });
-
-        if (error) {
-          console.error('Erreur lors du chargement des membres:', error);
-          return;
-        }
-
-        if (!data || data.length === 0) {
-          setOptions([]);
-          return;
-        }
-
-        // Met les patriarches/matriarches en haut et trie le reste
-        const leaders = data.filter(m => m.title === 'Patriarche' || m.title === 'Matriarche');
-        const otherMembers = data.filter(m => m.title !== 'Patriarche' && m.title !== 'Matriarche');
-
-        const sorted = [...leaders, ...otherMembers];
-
-        const mapped = sorted.map(member => ({
-          value: `${member.first_name} ${member.last_name}`,
-          label: `${member.first_name} ${member.last_name} (${member.title})`
-        }));
-
-        setOptions(mapped);
-      } catch (err) {
-        console.error('Erreur lors du chargement des membres:', err);
-        setOptions([]);
-      }
-    };
-
-    if (open && options.length === 0) {
-      fetchMembers();
+  const searchMembers = useCallback(async (query: string) => {
+    if (!query || query.length < 2) {
+      setMembers([]);
+      return;
     }
-  }, [open, options.length]);
 
-  const customPlaceholder = relationship === 'époux'
-    ? "Rechercher votre conjoint(e)..."
-    : "Rechercher votre parent...";
+    setIsLoading(true);
+    try {
+      const results = await api.searchMembers(query);
+      setMembers(results);
+    } catch (error) {
+      console.error('Erreur lors du chargement des membres:', error);
+      setMembers([]);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les membres. Veuillez réessayer.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [toast]);
+
+  const handleMemberSelect = useCallback((memberId: string) => {
+    const selectedMember = members.find(m => m.id === memberId);
+    if (selectedMember) {
+      const displayName = `${selectedMember.title || ''} ${selectedMember.first_name} ${selectedMember.last_name}`.trim();
+      setValue(name, displayName);
+    }
+  }, [members, setValue, name]);
+
+  const memberOptions = members.map(member => ({
+    value: member.id,
+    label: `${member.title || ''} ${member.first_name} ${member.last_name}`.trim()
+  }));
 
   return (
     <Combobox
-      items={options}
-      value={watch(name)}
-      onChange={(value) => setValue(name, value, { shouldValidate: true })}
-      onSearch={() => {}} // La recherche est gérée côté client
-      placeholder={placeholder || customPlaceholder}
-      onFocus={() => setOpen(true)}
+      items={memberOptions}
+      onSearch={searchMembers}
+      onChange={handleMemberSelect}
+      value={currentValue}
+      placeholder={placeholder}
+      disabled={isLoading}
     />
   );
 };

@@ -97,12 +97,12 @@ const InvitePage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-whatsapp-50 via-white to-whatsapp-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-whatsapp-50 via-white to-whatsapp-100 flex items-center justify-center p-4 pt-20">
       <div className="w-full max-w-md">
-        {/* Header identique aux formulaires d'inscription */}
+        {/* Header identique aux formulaires d'inscription avec même hauteur */}
         <div className="text-center mb-8 animate-fade-in">
-          <div className="mx-auto w-20 h-20 bg-gradient-to-br from-whatsapp-500 to-whatsapp-600 rounded-full flex items-center justify-center mb-6 shadow-lg animate-bounce-in">
-            <Users className="w-10 h-10 text-white" />
+          <div className="mx-auto w-24 h-24 bg-gradient-to-br from-whatsapp-500 to-whatsapp-600 rounded-full flex items-center justify-center mb-6 shadow-lg animate-bounce-in">
+            <Users className="w-12 h-12 text-white" />
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Ajouter un membre
