@@ -149,8 +149,8 @@ export const api = {
           ...profile,
           relationship_type: profile.relationship_type?.toLowerCase() as Database['public']['Enums']['relationship_type'],
           title: profile.title || 'Fils' as Database['public']['Enums']['family_title'],
-          father_name: profile.father_name || null,
-          mother_name: profile.mother_name || null
+          father_name: profile.father_id || null,
+          mother_name: profile.mother_id || null
         };
 
         console.log('Données à insérer dans la base:', data);

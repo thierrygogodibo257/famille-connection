@@ -102,7 +102,7 @@ export const InteractiveFamilyTree = () => {
         level: 1,
         position: {
           x: (index - (members.length - 1) / 2) * 250,
-          y: 250
+          y: 100 // Position encore plus haute (était 150)
         },
         connections: member.connections || []
       }))
@@ -246,14 +246,12 @@ export const InteractiveFamilyTree = () => {
           >
             <motion.path
               d={`M 0 0 L ${child.position.x - node.position.x} ${child.position.y - node.position.y}`}
-              stroke="url(#gradient)"
-              strokeWidth="3"
+              stroke="#16a34a"
+              strokeWidth="4"
               fill="none"
               initial={{ pathLength: 0 }}
               animate={{ pathLength: 1 }}
               transition={{ duration: 1, delay: 0.5 + node.level * 0.1 }}
-              strokeDasharray="5,5"
-              className="animate-pulse"
             />
           </svg>
         ))}
@@ -290,7 +288,7 @@ export const InteractiveFamilyTree = () => {
           {/* Bulle principale */}
           <motion.div
             className={`
-              relative w-32 h-32 rounded-full cursor-pointer transition-all duration-300
+              relative w-28 h-28 rounded-full cursor-pointer transition-all duration-300
               ${isSelected
                 ? 'ring-4 ring-whatsapp-400 shadow-2xl'
                 : 'ring-2 ring-white/50 shadow-lg hover:shadow-xl'
@@ -459,7 +457,7 @@ export const InteractiveFamilyTree = () => {
         </svg>
 
         {/* Conteneur de l'arbre avec centrage automatique */}
-        <div className="relative w-full h-full flex items-center justify-center">
+        <div className="relative w-full h-full flex items-start justify-center pt-20">
           <div className="relative">
             {renderTreeNodes(treeData)}
           </div>

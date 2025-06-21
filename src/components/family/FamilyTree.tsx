@@ -61,7 +61,12 @@ export function FamilyTree() {
             </p>
           </div>
         ) : (
-          <InteractiveFamilyTree />
+          <div className="w-full h-full overflow-auto" style={{ minHeight: 400, minWidth: 320 }}>
+            {/* Ajout d'une double barre de défilement autour de l'arbre */}
+            <div className="relative min-w-[600px] min-h-[600px] overflow-auto" style={{ maxHeight: '80vh', maxWidth: '100vw' }}>
+              <InteractiveFamilyTree />
+            </div>
+          </div>
         )}
       </div>
     </div>
