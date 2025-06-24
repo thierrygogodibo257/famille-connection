@@ -7,7 +7,7 @@ import { Loader2, Calendar, MapPin } from 'lucide-react';
 interface TreeNode {
   id: string;
   name: string;
-  title: string;
+  civilite: string;
   photoUrl?: string;
   attributes?: {
     birthDate?: string;
@@ -29,7 +29,7 @@ export const InteractiveFamilyTree = () => {
     members.forEach(member => memberMap.set(member.id, member));
 
     // Trouver le patriarche (membre sans parent)
-    const patriarch = members.find(member => !member.parent_id);
+    const patriarch = members.find(member => !member.father_id && !member.mother_id);
 
     if (!patriarch) {
       // Si pas de patriarche trouvé, prendre le premier membre
@@ -45,7 +45,7 @@ export const InteractiveFamilyTree = () => {
 
     // Chercher tous les membres qui ont ce membre comme parent
     memberMap.forEach(potentialChild => {
-      if (potentialChild.parent_id === member.id) {
+      if (potentialChild.father_id === member.id || potentialChild.mother_id === member.id) {
         children.push(buildNodeFromMember(potentialChild, memberMap));
       }
     });
@@ -53,7 +53,7 @@ export const InteractiveFamilyTree = () => {
     return {
       id: member.id,
       name: `${member.first_name} ${member.last_name}`,
-      title: member.title,
+      civilite: member.civilite,
       photoUrl: member.avatar_url,
       attributes: {
         birthDate: member.birth_date,
@@ -76,13 +76,14 @@ export const InteractiveFamilyTree = () => {
             </div>
             <div className="space-y-1">
               <h3 className="text-lg font-bold text-gray-900">{nodeDatum.name}</h3>
-              <p className="text-whatsapp-600 font-medium text-sm">{nodeDatum.title}</p>
+              <p className="text-whatsapp-600 font-medium text-sm">{nodeDatum.civilite}</p>
               {nodeDatum.attributes?.situation && (
                 <p className="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded-full">
                   {nodeDatum.attributes.situation}
                 </p>
               )}
             </div>
+
             <div className="w-full space-y-2 text-xs">
               {nodeDatum.attributes?.birthDate && (
                 <div className="flex items-center justify-center space-x-1 text-gray-600">
@@ -148,6 +149,7 @@ export const InteractiveFamilyTree = () => {
   return (
     <div className="w-full h-screen bg-gradient-to-br from-slate-50 via-green-50 to-emerald-50">
       <Tree
+        key={treeData.id}
         data={treeData}
         translate={{ x: 400, y: 150 }}
         orientation="vertical"
@@ -159,6 +161,10 @@ export const InteractiveFamilyTree = () => {
         scaleExtent={{ min: 0.3, max: 2 }}
         enableLegacyTransitions
         transitionDuration={500}
+        onNodeClick={(nodeData) => {
+          console.log('Node clicked:', nodeData);
+          setSelectedNode(nodeData.id);
+        }}
       />
     </div>
   );

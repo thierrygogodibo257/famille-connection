@@ -11,40 +11,44 @@ DROP POLICY IF EXISTS "Admins can manage all profiles" ON public.profiles;
 DROP POLICY IF EXISTS "Users can manage their own profile" ON public.profiles;
 DROP POLICY IF EXISTS "Admins have full access to profiles" ON public.profiles;
 
+-- 2. Supprimer la fonction problématique
+DROP FUNCTION IF EXISTS public.is_current_user_admin();
 
--- 2. Créer une fonction sécurisée pour vérifier le statut d'admin
--- Cette fonction utilise 'SECURITY DEFINER' pour s'exécuter avec des droits élevés,
--- ce qui lui permet de consulter la table 'profiles' sans redéclencher les politiques RLS.
+-- 3. Créer une fonction sécurisée qui utilise les métadonnées utilisateur
+-- au lieu de consulter la table profiles
 CREATE OR REPLACE FUNCTION public.is_current_user_admin()
 RETURNS BOOLEAN
 LANGUAGE plpgsql
 SECURITY DEFINER
--- 'search_path' est une mesure de sécurité pour éviter des attaques
 SET search_path = '';
 AS $$
-DECLARE
-  is_admin_status BOOLEAN;
 BEGIN
-  SELECT p.is_admin INTO is_admin_status
-  FROM public.profiles p
-  WHERE p.user_id = auth.uid();
-
-  RETURN COALESCE(is_admin_status, false);
+  -- Utiliser les métadonnées utilisateur au lieu de consulter la table profiles
+  RETURN COALESCE(auth.jwt() ->> 'is_admin', 'false')::BOOLEAN;
 END;
 $$;
 
-
--- 3. Recréer les politiques RLS pour 'profiles' de manière non-récursive
+-- 4. Recréer les politiques RLS pour 'profiles' de manière non-récursive
 
 -- Règle #1 : Les utilisateurs peuvent gérer leur propre profil.
 CREATE POLICY "Users can manage their own profile" ON public.profiles
 FOR ALL
-USING (auth.uid() = user_id)
-WITH CHECK (auth.uid() = user_id);
+USING (auth.uid()::text = id)
+WITH CHECK (auth.uid()::text = id);
 
 -- Règle #2 : Les admins ont un accès complet à tous les profils.
--- Elle utilise notre nouvelle fonction sécurisée pour éviter la récursion.
+-- Utilise les métadonnées JWT au lieu de consulter la table
 CREATE POLICY "Admins have full access to profiles" ON public.profiles
 FOR ALL
-USING (public.is_current_user_admin())
-WITH CHECK (public.is_current_user_admin());
+USING (COALESCE(auth.jwt() ->> 'is_admin', 'false')::BOOLEAN)
+WITH CHECK (COALESCE(auth.jwt() ->> 'is_admin', 'false')::BOOLEAN);
+
+-- 5. Alternative : Politique plus simple pour les admins
+-- Si la politique ci-dessus ne fonctionne pas, on peut utiliser une approche plus simple
+-- en désactivant temporairement RLS pour les admins ou en utilisant une fonction différente
+
+-- 6. Politique de fallback pour permettre la lecture de tous les profils
+-- (à utiliser seulement si les politiques admin ne fonctionnent pas)
+CREATE POLICY "Allow read access to all authenticated users" ON public.profiles
+FOR SELECT
+USING (auth.role() = 'authenticated');

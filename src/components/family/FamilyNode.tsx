@@ -46,7 +46,7 @@ export const FamilyNode = ({ nodeDatum, onClick, isSelected = false }: FamilyNod
           <h3 className="text-lg font-bold text-gray-900">
             {nodeDatum.name}
           </h3>
-          <p className="text-whatsapp-600 font-medium text-sm">{nodeDatum.title}</p>
+          <p className="text-whatsapp-600 font-medium text-sm">{nodeDatum.civilite}</p>
           
           {nodeDatum.attributes?.situation && (
             <p className="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded-full">

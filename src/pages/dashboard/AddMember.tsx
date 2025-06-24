@@ -15,7 +15,7 @@ export default function AddMember() {
     email: '',
     first_name: '',
     last_name: '',
-    title: '',
+    civilite: '',
     birth_date: '',
     current_location: '',
     situation: '',
@@ -32,7 +32,7 @@ export default function AddMember() {
       const memberData: NewFamilyMember = {
         id: uuidv4(),
         ...formData,
-        title: (formData.title as any) || null,
+        civilite: (formData.civilite as any) || null,
         birth_date: formData.birth_date || null,
         current_location: formData.current_location || null,
         situation: formData.situation || null,
@@ -49,7 +49,7 @@ export default function AddMember() {
         email: '',
         first_name: '',
         last_name: '',
-        title: '',
+        civilite: '',
         birth_date: '',
         current_location: '',
         situation: '',
@@ -120,12 +120,12 @@ export default function AddMember() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="title" className="text-gray-700">Titre</Label>
+              <Label htmlFor="civilite" className="text-gray-700">Civilité</Label>
               <Input
-                id="title"
+                id="civilite"
                 placeholder="ex: Père, Mère, Frère, Sœur..."
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                value={formData.civilite}
+                onChange={(e) => setFormData({ ...formData, civilite: e.target.value })}
                 required
                 disabled={isLoading}
                 className="bg-white/80 backdrop-blur-sm"

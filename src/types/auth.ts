@@ -1,4 +1,3 @@
-
 export interface User {
   id: string;
   email: string;
@@ -6,7 +5,7 @@ export interface User {
   lastName: string;
   phone?: string;
   country?: string;
-  title: string;
+  civilite: string;
   photoUrl?: string;
   isAdmin: boolean;
   isPatriarch: boolean;
@@ -32,7 +31,7 @@ export interface RegisterData {
   lastName: string;
   phone?: string;
   country?: string;
-  title: string;
+  civilite: string;
   photoUrl?: string;
   isAdmin?: boolean;
 }

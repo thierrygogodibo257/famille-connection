@@ -73,7 +73,7 @@ serve(async (req) => {
         mother_id: body.mother_id,
         is_admin: body.is_admin,
         birth_date: body.birth_date,
-        title: body.title,
+        civilite: body.civilite,
         situation: body.situation,
         is_patriarch: body.is_patriarch,
       })

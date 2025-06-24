@@ -2,23 +2,26 @@ import { RelationshipType } from './family';
 
 export interface Profile {
   id: string;
-  userId: string;
-  firstName: string;
-  lastName: string;
+  user_id: string; // ID de l'utilisateur Supabase
   email: string;
+  first_name: string;
+  last_name: string;
   phone?: string;
-  country?: string;
-  title: string;
-  photoUrl?: string;
-  birthDate?: string;
-  birthPlace?: string;
-  currentLocation?: string;
-  situation?: string;
   profession?: string;
-  isAdmin: boolean;
-  isPatriarch: boolean;
-  createdAt: string;
-  updatedAt: string;
+  current_location?: string;
+  birth_place?: string;
+  avatar_url?: string;
+  photo_url?: string;
+  relationship_type?: 'fils' | 'fille' | 'père' | 'mère' | 'cousin' | 'cousine' | 'tante' | 'oncle' | 'neveu' | 'nièce' | 'petit-fils' | 'petite-fille' | 'grand-père' | 'grande-mère' | 'époux' | 'épouse' | 'patriarche';
+  father_name?: string;
+  mother_name?: string;
+  is_admin?: boolean;
+  birth_date?: string;
+  civilite?: 'M.' | 'Mme';
+  situation?: string;
+  is_patriarch?: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface UpdateProfileData {
@@ -26,7 +29,7 @@ export interface UpdateProfileData {
   lastName?: string;
   phone?: string;
   country?: string;
-  title?: string;
+  civilite?: string;
   photoUrl?: string;
   birthDate?: string;
   birthPlace?: string;
@@ -51,7 +54,7 @@ export interface ProfileData {
   mother_name: string;
   is_admin: boolean;
   birth_date: string | null;
-  title: string;
+  civilite: string;
   situation: string;
   is_patriarch: boolean;
   created_at: string;

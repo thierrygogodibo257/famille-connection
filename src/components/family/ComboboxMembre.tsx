@@ -28,7 +28,7 @@ export const ComboboxMembre = ({
     const fetchMembers = async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, first_name, last_name, title, relationship_type')
+        .select('id, first_name, last_name, civilite, relationship_type')
         .order('created_at', { ascending: false });
 
       if (!data || error) {
@@ -38,13 +38,13 @@ export const ComboboxMembre = ({
 
       // Met les patriarches en haut et trie le reste
       const sorted = [
-        ...data.filter(m => m.title === 'Patriarche'),
-        ...data.filter(m => m.title !== 'Patriarche')
+        ...data.filter(m => m.civilite === 'Patriarche'),
+        ...data.filter(m => m.civilite !== 'Patriarche')
       ];
 
       const mapped = sorted.map(member => ({
         value: member.id,
-        label: `${member.first_name} ${member.last_name} (${member.title})`
+        label: `${member.first_name} ${member.last_name} (${member.civilite})`
       }));
 
       setOptions(mapped);

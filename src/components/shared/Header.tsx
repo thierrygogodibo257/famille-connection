@@ -160,191 +160,81 @@ const Header = () => {
             </div>
             </div>
 
-          {/* Navigation Desktop */}
-          <nav className="hidden md:flex items-center space-x-8">
-            {user && (
-              <>
-                <Link
-                  to={ROUTES.HOME}
-                  className={`nav-link relative px-4 py-2 text-white/90 hover:text-white transition-colors ${
-                    isActive(ROUTES.HOME)
-                      ? 'after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-white after:rounded-full'
-                      : ''
-                  }`}
-                >
-                  Accueil
-                </Link>
-                <Link
-                  to={ROUTES.DASHBOARD.TREE}
-                  className={`nav-link relative px-4 py-2 text-white/90 hover:text-white transition-colors ${
-                    isActive(ROUTES.DASHBOARD.TREE)
-                      ? 'after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-white after:rounded-full'
-                      : ''
-                  }`}
-                >
-                  Arbre Familial
-                </Link>
-                <Link
-                  to={ROUTES.DASHBOARD.MEMBERS}
-                  className={`nav-link relative px-4 py-2 text-white/90 hover:text-white transition-colors ${
-                    isActive(ROUTES.DASHBOARD.MEMBERS)
-                      ? 'after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-white after:rounded-full'
-                      : ''
-                  }`}
-                >
-                  Membres
-                </Link>
-              </>
-            )}
-          </nav>
-
-          {/* Zone Sociale */}
-          <div className="hidden md:flex items-center space-x-4">
+          {/* Zone Utilisateur */}
+          <div className="flex items-center gap-4 ml-auto">
+            {/* Conteneur social existant déplacé ici */}
             <div className="bg-white/10 backdrop-blur-md rounded-lg p-2 shadow-lg">
               <div className="flex space-x-3">
-                <motion.button
-                  type="button"
-                  className="social-button text-white/80 hover:text-white transition-colors"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.95 }}
-                  aria-label="Facebook"
-                >
+                <motion.button type="button" className="social-button text-white/80 hover:text-white transition-colors" aria-label="Facebook">
                   <Facebook className="w-5 h-5" />
                 </motion.button>
-                <motion.button
-                  type="button"
-                  className="social-button text-white/80 hover:text-white transition-colors"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.95 }}
-                  aria-label="Twitter"
-                >
+                <motion.button type="button" className="social-button text-white/80 hover:text-white transition-colors" aria-label="Twitter">
                   <Twitter className="w-5 h-5" />
                 </motion.button>
-                <motion.button
-                  type="button"
-                  className="social-button text-white/80 hover:text-white transition-colors"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.95 }}
-                  aria-label="Instagram"
-                >
+                <motion.button type="button" className="social-button text-white/80 hover:text-white transition-colors" aria-label="Instagram">
                   <Instagram className="w-5 h-5" />
                 </motion.button>
-                <motion.button
-                  type="button"
-                  className="social-button text-white/80 hover:text-white transition-colors"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.95 }}
-                  aria-label="Linkedin"
-                >
+                <motion.button type="button" className="social-button text-white/80 hover:text-white transition-colors" aria-label="Linkedin">
                   <Linkedin className="w-5 h-5" />
                 </motion.button>
-                <motion.button
-                  type="button"
-                  className="social-button text-white/80 hover:text-white transition-colors"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.95 }}
-                  aria-label="MessageCircle"
-                >
+                <motion.button type="button" className="social-button text-white/80 hover:text-white transition-colors" aria-label="MessageCircle">
                   <MessageCircle className="w-5 h-5" />
                 </motion.button>
               </div>
             </div>
-        </div>
-
-          {/* Zone Utilisateur */}
-          <div className="flex items-center space-x-4">
-            {user ? (
+            {/* Avatar utilisateur + menu */}
+            {user && (
               <div className="relative" ref={userMenuRef}>
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
+                <button
+                  type="button"
+                  className="focus:outline-none"
+                  onClick={() => setIsUserMenuOpen((open) => !open)}
+                  aria-haspopup="true"
+                  aria-expanded={isUserMenuOpen}
                 >
-                  <button
-                    type="button"
-                    className="focus:outline-none"
-                    onClick={() => setIsUserMenuOpen((open) => !open)}
-                    aria-haspopup="true"
-                    aria-expanded={isUserMenuOpen}
-                  >
-                    <Avatar
-                      src={user.user_metadata?.photo_url}
-                      fallback={user.user_metadata?.first_name?.[0] || 'U'}
-                      className="user-avatar ring-2 ring-white/20"
-                    />
-                    <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-400 rounded-full border-2 border-white animate-pulse" />
-                  </button>
-                </motion.div>
+                  <Avatar
+                    src={user.user_metadata?.avatar_url || '/default-avatar.png'}
+                    fallback={user.user_metadata?.display_name?.[0] || 'U'}
+                    className="user-avatar ring-2 ring-white/20"
+                  />
+                </button>
                 {isUserMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg py-1 z-50">
-                    <div className="px-4 py-2 border-b">
-                      <p className="user-name font-medium">{user.user_metadata?.first_name} {user.user_metadata?.last_name}</p>
-                      <p className="user-status-text text-sm text-gray-500">En ligne</p>
-                    </div>
-                    <div className="py-1">
-                      <Link
-                        to={ROUTES.DASHBOARD.ROOT}
-                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                        onClick={() => setIsUserMenuOpen(false)}
+                  <div className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg py-1 z-50">
+                    {/* Dashboard pour admin et membre */}
+                    {(user.user_metadata?.role === 'admin' || user.user_metadata?.role === 'member' || user.user_metadata?.is_member) && (
+                      <button
+                        onClick={() => {
+                          navigate('/dashboard');
+                          setIsUserMenuOpen(false);
+                        }}
+                        className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors flex items-center"
                       >
-                        <MessageSquare className="w-4 h-4 mr-2" />
+                        <Users className="w-4 h-4 mr-2" />
                         Dashboard
-                      </Link>
-                      <Link
-                        to={ROUTES.DASHBOARD.INVITE}
-                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                        onClick={() => setIsUserMenuOpen(false)}
-                      >
-                        <UserPlus className="w-4 h-4 mr-2" />
-                        Inviter un membre
-                      </Link>
-                      <Link
-                        to={ROUTES.DASHBOARD.REPORT}
-                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                        onClick={() => setIsUserMenuOpen(false)}
-                      >
-                        <Flag className="w-4 h-4 mr-2" />
-                        Signaler un membre
-                      </Link>
-                      <Link
-                        to={ROUTES.DASHBOARD.CHAT}
-                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                        onClick={() => setIsUserMenuOpen(false)}
-                      >
-                        <MessageCircle className="w-4 h-4 mr-2" />
-                        Initier un chat
-                      </Link>
-                      {user.user_metadata?.is_admin && (
-                        <Link
-                          to={ROUTES.DASHBOARD.SETTINGS}
-                          className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                          onClick={() => setIsUserMenuOpen(false)}
-                        >
-                          <Settings className="w-4 h-4 mr-2" />
-                          Paramètres
-                        </Link>
-                      )}
-                      {user.user_metadata?.is_admin && (
-                        <Link
-                          to={ROUTES.DASHBOARD.ADMIN}
-                          className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                          onClick={() => setIsUserMenuOpen(false)}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        handleSignOut();
+                        setIsUserMenuOpen(false);
+                      }}
+                      className="w-full text-left px-4 py-2 text-black whitespace-nowrap hover:bg-gray-100 transition-colors flex items-center"
+                    >
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Se déconnecter
+                    </button>
+                    {user.user_metadata?.role === 'admin' && (
+                      <>
+                        <button
+                          onClick={() => {
+                            navigate('/dashboard/admin');
+                            setIsUserMenuOpen(false);
+                          }}
+                          className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors flex items-center"
                         >
                           <Shield className="w-4 h-4 mr-2" />
                           Administration
-                        </Link>
-                      )}
-                      <button
-                        onClick={() => {
-                          handleSignOut();
-                          setIsUserMenuOpen(false);
-                        }}
-                        className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 transition-colors flex items-center"
-                      >
-                        <LogOut className="w-4 h-4 mr-2" />
-                        Se déconnecter
-                      </button>
-                      {/* Afficher le bouton Delete All seulement pour les admins */}
-                      {user.user_metadata?.is_admin && (
+                        </button>
                         <button
                           onClick={() => {
                             setShowDeleteDialog(true);
@@ -356,17 +246,11 @@ const Header = () => {
                           <Flag className="w-4 h-4 mr-2" />
                           {isDeleting ? 'Suppression...' : 'Delete All'}
                         </button>
-                      )}
-                    </div>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
-            ) : (
-              <Link to={ROUTES.AUTH.LOGIN}>
-                <Button className="bg-white/10 hover:bg-white/20 text-white border border-white/20">
-                  Se connecter
-                  </Button>
-                </Link>
             )}
 
             {/* Menu Mobile */}
@@ -457,8 +341,9 @@ const Header = () => {
                   handleSignOut();
                   setIsMobileMenuOpen(false);
                 }}
-                className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center"
+                className="w-full text-left px-4 py-2 text-black whitespace-nowrap hover:bg-gray-100 transition-colors flex items-center"
               >
+                <LogOut className="w-4 h-4 mr-2" />
                 Se déconnecter
               </button>
             </>

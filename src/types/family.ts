@@ -1,7 +1,7 @@
 import { Database } from '@/integrations/supabase/types';
 
 // 🔵 Typage des ENUMs
-export type FamilyTitle = Database['public']['Enums']['family_title'];
+export type FamilyCivilite = Database['public']['Enums']['family_title'];
 export type RelationshipType = Database['public']['Enums']['relationship_type'];
 
 // 👤 Représente un membre de la famille
@@ -10,7 +10,7 @@ export interface FamilyMember {
   first_name: string;
   last_name: string;
   email: string;
-  title: FamilyTitle | null;
+  civilite: FamilyCivilite | null;
   birth_date: string | null;
   birth_place: string | null;
   current_location: string | null;

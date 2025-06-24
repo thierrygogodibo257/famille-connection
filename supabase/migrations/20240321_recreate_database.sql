@@ -353,7 +353,7 @@ SELECT
     p.first_name,
     p.last_name,
     p.email,
-    p.title,
+    p.civilite,
     p.relationship_type,
     p.is_patriarch,
     fm.role,

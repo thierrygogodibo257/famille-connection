@@ -1,9 +1,8 @@
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import type { Profile } from '@/types/profile';
 import { FamilyMember, NewFamilyMember } from '@/types/family';
-import { Database } from '@/integrations/supabase/types';
-
-type Profile = Database['public']['Tables']['profiles']['Row'];
+import { api } from '@/services/api';
 
 export const useFamilyMembers = () => {
   const [members, setMembers] = useState<FamilyMember[]>([]);
@@ -12,54 +11,44 @@ export const useFamilyMembers = () => {
 
   const fetchMembers = useCallback(async () => {
     try {
-      console.log('[useFamilyMembers] Fetching members...');
       setIsLoading(true);
       setError(null);
 
-      const { data, error: fetchError } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: true });
+      console.log('Fetching family members...');
+      const profiles = await api.profiles.getAll();
 
-      console.log('[useFamilyMembers] Supabase response:', { data, error: fetchError });
-
-      if (!data || data.length === 0) {
-        console.warn('[useFamilyMembers] No family members found in database!');
-      } else {
-        console.log(`[useFamilyMembers] ${data.length} members fetched.`);
-        console.log('[useFamilyMembers] First member:', data[0]);
+      if (!profiles || profiles.length === 0) {
+        console.log('No profiles found');
+        setMembers([]);
+        return;
       }
 
-      if (fetchError) {
-        throw fetchError;
-      }
-
-      // Convertir les données en type FamilyMember
-      const familyMembers: FamilyMember[] = (data || []).map(member => ({
-        id: member.id,
-        first_name: member.first_name,
-        last_name: member.last_name,
-        email: member.email,
-        title: member.title as FamilyMember['title'],
-        birth_date: member.birth_date,
-        birth_place: member.birth_place,
-        current_location: member.current_location,
-        situation: member.situation,
-        avatar_url: member.avatar_url,
-        father_id: member.father_id,
-        mother_id: member.mother_id,
-        created_at: member.created_at,
-        updated_at: member.updated_at
+      // Convertir les profils en membres de famille avec des valeurs par défaut sécurisées
+      const familyMembers: FamilyMember[] = profiles.map(profile => ({
+        id: profile.id || '',
+        first_name: profile.first_name || '',
+        last_name: profile.last_name || '',
+        email: profile.email || '',
+        civilite: (profile.civilite as FamilyMember['civilite']) || 'M.',
+        birth_date: profile.birth_date || null,
+        birth_place: profile.birth_place || null,
+        current_location: profile.current_location || null,
+        situation: profile.situation || null,
+        avatar_url: profile.avatar_url || null,
+        father_id: profile.father_id || null,
+        mother_id: profile.mother_id || null,
+        created_at: profile.created_at || new Date().toISOString(),
+        updated_at: profile.updated_at || new Date().toISOString()
       }));
 
+      console.log('Family members loaded:', familyMembers.length);
       setMembers(familyMembers);
-      console.log('[useFamilyMembers] Members updated:', familyMembers);
     } catch (err) {
-      console.error('[useFamilyMembers] Erreur lors de la récupération des membres:', err);
+      console.error('Error fetching family members:', err);
       setError(err instanceof Error ? err.message : 'Une erreur est survenue');
+      setMembers([]); // S'assurer que members n'est jamais undefined
     } finally {
       setIsLoading(false);
-      console.log('[useFamilyMembers] Fetch finished.');
     }
   }, []);
 
@@ -93,7 +82,7 @@ export const useFamilyMembers = () => {
         first_name: data.first_name,
         last_name: data.last_name,
         email: data.email,
-        title: data.title as FamilyMember['title'],
+        civilite: data.civilite as FamilyMember['civilite'],
         birth_date: data.birth_date,
         birth_place: data.birth_place,
         current_location: data.current_location,
@@ -138,7 +127,7 @@ export const useFamilyMembers = () => {
         first_name: data.first_name,
         last_name: data.last_name,
         email: data.email,
-        title: data.title as FamilyMember['title'],
+        civilite: data.civilite as FamilyMember['civilite'],
         birth_date: data.birth_date,
         birth_place: data.birth_place,
         current_location: data.current_location,
@@ -204,7 +193,7 @@ export const useFamilyMembers = () => {
         first_name: data.first_name,
         last_name: data.last_name,
         email: data.email,
-        title: data.title as FamilyMember['title'],
+        civilite: data.civilite as FamilyMember['civilite'],
         birth_date: data.birth_date,
         birth_place: data.birth_place,
         current_location: data.current_location,

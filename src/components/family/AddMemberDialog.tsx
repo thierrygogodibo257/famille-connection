@@ -23,7 +23,7 @@ export const AddMemberDialog = ({
     first_name: '',
     last_name: '',
     email: '',
-    title: 'Fils',
+    civilite: 'Fils',
     parent_id: undefined
   });
 
@@ -35,7 +35,7 @@ export const AddMemberDialog = ({
         first_name: '',
         last_name: '',
         email: '',
-        title: 'Fils',
+        civilite: 'Fils',
         parent_id: undefined
       });
     } catch (error) {
@@ -83,10 +83,10 @@ export const AddMemberDialog = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="title">Rôle</Label>
+            <Label htmlFor="civilite">Rôle</Label>
             <Select
-              value={formData.title}
-              onValueChange={(value) => setFormData({ ...formData, title: value as FamilyMember['title'] })}
+              value={formData.civilite}
+              onValueChange={(value) => setFormData({ ...formData, civilite: value as FamilyMember['civilite'] })}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Sélectionner un rôle" />

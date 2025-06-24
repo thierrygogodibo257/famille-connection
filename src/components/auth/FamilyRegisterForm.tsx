@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,92 +6,37 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar } from '@/components/shared/Avatar';
-import { Camera, Eye, EyeOff, ThumbsUp, Loader2 } from 'lucide-react';
+import { Camera, Eye, EyeOff, UserPlus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { FamilyRegisterSchema, FamilyRegisterData } from '@/lib/validations/relationshipSchema';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import type { ProfileData } from '@/types/profile';
-import { api } from '@/services/api';
-import { ComboboxMembre } from '@/components/family/ComboboxMembre';
-import { FamilyRegisterSchema, FamilyRegisterData, RelationshipType } from '@/lib/validations/relationshipSchema';
-import { relationshipTypeOptions } from '@/lib/constants/relationshipTypeOptions';
-
-// Relations qui nécessitent des informations supplémentaires
-const RELATIONS_REQUIRING_INFO = ['époux', 'épouse', 'fils', 'fille'] as const;
 
 export const FamilyRegisterForm = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [profilePhoto, setProfilePhoto] = useState<string>('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [role, setRole] = useState<'user' | 'admin'>('user');
+  const [adminCode, setAdminCode] = useState('');
+  const [roleError, setRoleError] = useState('');
+  const [isAdminDialogOpen, setIsAdminDialogOpen] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [role, setRole] = useState<'Membre' | 'Administrateur'>('Membre');
-  const [showAdminModal, setShowAdminModal] = useState(false);
-  const [adminCode, setAdminCode] = useState('');
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [patriarchExists, setPatriarchExists] = useState(false);
 
   const methods = useForm<FamilyRegisterData>({
     resolver: zodResolver(FamilyRegisterSchema),
     defaultValues: {
-      title: 'M.',
-      firstName: '',
-      lastName: '',
+      display_name: '',
       email: '',
       password: '',
-      phoneCode: '+225',
+      phone_code: '+225',
       phone: '',
-      profession: '',
-      currentLocation: '',
-      birthPlace: '',
-      photoUrl: '',
-      relationship: 'fils',
-      spouseId: '',
-      fatherId: '',
-      motherId: '',
-      birthDate: '',
+      avatar_url: '',
+      civilite: 'M.',
+      role: 'user',
     }
   });
-
-  const fetchAllMembers = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, first_name, last_name, title, relationship_type')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      const mappedResults = data?.map(member => ({
-        value: member.id,
-        label: `${member.first_name} ${member.last_name} (${member.title})`,
-        relationship: member.relationship_type
-      })) || [];
-
-      setSearchResults(mappedResults);
-    } catch (err) {
-      console.error('Erreur lors du chargement des membres:', err);
-      toast({
-        title: "Erreur de chargement",
-        description: "Impossible de charger la liste des membres",
-        variant: "destructive",
-      });
-    }
-  };
-
-  useEffect(() => {
-    // Vérifie s'il existe déjà un patriarche dans la table profiles
-    (async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('is_patriarch', true)
-        .limit(1);
-      setPatriarchExists(!!(data && data.length > 0));
-    })();
-  }, []);
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -100,252 +45,115 @@ export const FamilyRegisterForm = () => {
       reader.onload = (event) => {
         const result = event.target?.result as string;
         setProfilePhoto(result);
-        methods.setValue('photoUrl', result);
+        methods.setValue('avatar_url', result);
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const searchFamilyMembers = async (query: string) => {
-    if (!query || query.length < 2) {
-      console.log('Query trop courte:', query);
-      setSearchResults([]);
-      return;
-    }
-
-    try {
-      console.log('Début recherche avec query:', query);
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, first_name, last_name, title')
-        .or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%`)
-        .limit(5);
-
-      if (error) {
-        console.error('Erreur Supabase:', error);
-        throw error;
-      }
-
-      console.log('Résultats bruts:', data);
-      const mappedResults = data?.map(member => ({
-        value: member.id,
-        label: `${member.first_name} ${member.last_name} (${member.title})`
-      })) || [];
-      console.log('Résultats mappés:', mappedResults);
-      setSearchResults(mappedResults);
-    } catch (err) {
-      console.error('Erreur détaillée:', err);
-      toast({
-        title: "Erreur de recherche",
-        description: "Impossible de rechercher les membres",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleRoleChange = (value: 'Membre' | 'Administrateur') => {
-    setRole(value);
-    if (value === 'Administrateur') {
-      setShowAdminModal(true);
+  const handleRoleChange = (value: 'user' | 'admin') => {
+    setRoleError('');
+    if (value === 'admin') {
+      setIsAdminDialogOpen(true);
     } else {
-      setIsAdmin(false);
+      setRole('user');
+      setAdminCode('');
+      setRoleError('');
     }
+    methods.setValue('role', value);
   };
+
   const onSubmit = async (data: FamilyRegisterData) => {
     setIsLoading(true);
-
+    setRoleError('');
+    if (!data.avatar_url) {
+      toast({ title: "Photo obligatoire", description: "Merci de sélectionner une photo de profil.", variant: "destructive" });
+      setIsLoading(false);
+      return;
+    }
+    if (role === 'admin' && adminCode !== '1432') {
+      setRoleError('Code administrateur incorrect');
+      setIsLoading(false);
+      return;
+    }
     try {
-      // Vérifier la connexion internet
-      if (!navigator.onLine) {
-        toast({
-          title: "Pas de connexion internet",
-          description: "Vérifiez votre connexion internet et réessayez.",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
-      }
+      const fullPhone = `${data.phone_code}${data.phone}`;
 
-      // Vérifier si l'email existe déjà d'une manière plus appropriée
-      const { data: userExists, error: userCheckError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('email', data.email)
-        .maybeSingle();
-
-      if (userCheckError) {
-        console.error('Erreur lors de la vérification email:', userCheckError);
-        if (userCheckError.message.includes('fetch')) {
-          toast({
-            title: "Problème de connexion",
-            description: "Impossible de se connecter au serveur. Vérifiez votre connexion internet.",
-            variant: "destructive",
-          });
-          setIsLoading(false);
-          return;
-        }
-      }
-
-      if (userExists) {
-        toast({
-          title: "Email déjà utilisé",
-          description: "Cette adresse email est déjà associée à un compte. Veuillez utiliser une autre adresse ou vous connecter.",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
-      }
-
-      // Vérifier si un membre lié est requis mais non fourni
-      if (RELATIONS_REQUIRING_INFO.includes(data.relationship as any) && !data.spouseId && !data.fatherId && !data.motherId) {
-        toast({
-          title: "Informations supplémentaires requises",
-          description: `Veuillez fournir les informations nécessaires pour la relation ${data.relationship === 'époux' ? 'conjugalité' : 'parentale'}`,
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
-      }
-
-      // 1. Créer le compte utilisateur
+      // Créer l'utilisateur avec les métadonnées de base
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/dashboard`,
           data: {
-            first_name: data.firstName,
-            last_name: data.lastName,
-            phone: data.phone ? `${data.phoneCode}${data.phone}` : '',
-            profession: data.profession || '',
-            current_location: data.currentLocation || '',
-            birth_place: data.birthPlace || '',
-            photo_url: '',
-            relationship_type: data.relationship as RelationshipType,
-            father_name: data.fatherId || '',
-            mother_name: data.motherId || '',
-            is_admin: isAdmin,
-            birth_date: data.birthDate || null,
-            title: data.title === 'Mme' ? 'Fille' : 'Fils',
-            situation: '',
-            is_patriarch: data.relationship === 'patriarche',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
+            display_name: data.display_name,
+            phone: fullPhone,
+            role: data.role,
+            civilite: data.civilite,
+            avatar_url: '', // Sera mis à jour après l'upload
           }
         }
       });
 
-      if (authError) {
-        console.error('Erreur auth:', authError);
-        if (authError.message.includes('fetch') || authError.message.includes('network')) {
-          throw new Error('Problème de connexion internet. Vérifiez votre connexion et réessayez.');
-        }
-        throw authError;
-      }
+      if (authError) throw authError;
 
-      // 2. Forcer la connexion pour récupérer le token JWT
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-        email: data.email,
-        password: data.password,
-      });
-
-      if (signInError) {
-        console.error('Erreur signin:', signInError);
-        if (signInError.message.includes('fetch') || signInError.message.includes('network')) {
-          throw new Error('Problème de connexion internet. Vérifiez votre connexion et réessayez.');
-        }
-        throw signInError;
-      }
-
-      const accessToken = signInData.session?.access_token;
-      if (!accessToken) throw new Error('Token JWT manquant après connexion.');
-
-      // 3. Upload avatar si besoin
-      let avatarUrl = '';
-      if (data.photoUrl && data.photoUrl.startsWith('data:')) {
+      // Upload de l'avatar si disponible
+      if (data.avatar_url && data.avatar_url.startsWith('data:') && authData.user) {
         try {
-          const res = await fetch(data.photoUrl);
-          const blob = await res.blob();
-          const file = new File([blob], `avatar_${signInData.user.id}.png`, { type: blob.type });
-          avatarUrl = await api.uploadAvatar(signInData.user.id, file);
+          // Convertir le data URL en blob
+          const response = await fetch(data.avatar_url);
+          const blob = await response.blob();
+
+          // Créer un nom de fichier unique
+          const fileExt = blob.type.split('/')[1] || 'png';
+          const fileName = `${authData.user.id}/avatar.${fileExt}`;
+
+          // Upload dans le bucket avatars
+          const { data: uploadData, error: uploadError } = await supabase
+            .storage
+            .from('avatars')
+            .upload(fileName, blob, {
+              upsert: true,
+              contentType: blob.type
+            });
+
+          if (uploadError) {
+            console.error('Erreur upload avatar:', uploadError);
+            throw uploadError;
+          }
+
+          // Récupérer l'URL publique
+          const { data: publicUrlData } = supabase
+            .storage
+            .from('avatars')
+            .getPublicUrl(fileName);
+
+          // Mettre à jour les métadonnées utilisateur avec l'URL de l'avatar
+          const { error: updateError } = await supabase.auth.updateUser({
+            data: {
+              avatar_url: publicUrlData.publicUrl
+            }
+          });
+
+          if (updateError) {
+            console.error('Erreur mise à jour avatar:', updateError);
+          }
+
         } catch (uploadError) {
-          console.error('Erreur upload avatar:', uploadError);
-          // Continue sans avatar si l'upload échoue
+          console.error('Erreur lors de l\'upload de l\'avatar:', uploadError);
+          // Continuer sans avatar si l'upload échoue
         }
-      }
-
-      // 4. Créer le profil dans la table via edge function
-      const profileData: ProfileData = {
-        id: signInData.user.id,
-        user_id: signInData.user.id,
-        email: data.email,
-        first_name: data.firstName,
-        last_name: data.lastName,
-        phone: data.phone ? `${data.phoneCode}${data.phone}` : '',
-        profession: data.profession || '',
-        current_location: data.currentLocation || '',
-        birth_place: data.birthPlace || '',
-        avatar_url: avatarUrl,
-        photo_url: avatarUrl,
-        relationship_type: data.relationship as RelationshipType,
-        father_name: data.fatherId || '',
-        mother_name: data.motherId || '',
-        is_admin: isAdmin,
-        birth_date: data.birthDate || null,
-        title: data.title === 'Mme' ? 'Fille' : 'Fils',
-        situation: '',
-        is_patriarch: data.relationship === 'patriarche',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-
-      console.log('Données du profil à créer:', profileData);
-
-      // Ajouter les relations spéciales si nécessaire
-      // if (data.spouseName) {
-      //   profileData.spouse_id = data.spouseName;
-      // }
-      // if (data.fatherName) {
-      //   profileData.father_id = data.fatherName;
-      // }
-      // if (data.motherName) {
-      //   profileData.mother_id = data.motherName;
-      // }
-
-      try {
-        await api.createProfile(profileData, accessToken);
-        console.log('Profil créé avec succès');
-      } catch (error) {
-        console.error('Erreur détaillée lors de la création du profil:', error);
-        if (error.message.includes('fetch') || error.message.includes('network')) {
-          throw new Error('Problème de connexion internet lors de la création du profil. Vérifiez votre connexion et réessayez.');
-        }
-        throw error;
       }
 
       toast({
         title: "Inscription réussie !",
-        description: "Votre compte et profil ont été créés avec succès. Vous pouvez maintenant accéder au tableau de bord.",
+        description: "Votre compte a été créé avec succès. Vérifiez vos emails pour valider votre inscription.",
       });
-
-      navigate('/dashboard');
+      navigate('/login');
     } catch (error: any) {
       console.error('Erreur inscription:', error);
-      let errorMessage = "Une erreur est survenue lors de l'inscription";
-
-      if (error.message?.includes('internet') || error.message?.includes('fetch') || error.message?.includes('network')) {
-        errorMessage = "Problème de connexion internet. Vérifiez votre connexion et réessayez.";
-      } else if (error.message?.includes('User already registered')) {
-        errorMessage = "Cette adresse email est déjà utilisée. Veuillez en utiliser une autre ou vous connecter.";
-      } else if (error.message?.includes('Connection closed')) {
-        errorMessage = "Problème de connexion au serveur. Veuillez vérifier votre connexion internet et réessayer.";
-      } else if (error.status === 422) {
-        errorMessage = "Les données fournies sont invalides. Veuillez vérifier vos informations.";
-      }
-
       toast({
         title: "Erreur d'inscription",
-        description: errorMessage,
+        description: error.message || 'Une erreur est survenue lors de l\'inscription',
         variant: "destructive",
       });
     } finally {
@@ -357,20 +165,17 @@ export const FamilyRegisterForm = () => {
     <FormProvider {...methods}>
       <div className="space-y-6">
         <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            methods.handleSubmit(onSubmit)(e);
-          }}
+          onSubmit={methods.handleSubmit(onSubmit)}
           className="space-y-4"
         >
-          {/* Photo de profil */}
+          {/* Photo de profil (obligatoire) */}
           <div className="text-center">
             <div className="flex justify-center mb-2">
               <div className="relative">
                 <Avatar
                   src={profilePhoto}
                   size="lg"
-                  fallback={methods.watch('firstName') ? methods.watch('firstName')[0].toUpperCase() : '?'}
+                  fallback={methods.watch('display_name') ? methods.watch('display_name')[0].toUpperCase() : '?'}
                 />
                 <label className="absolute bottom-0 right-0 w-6 h-6 bg-whatsapp-500 rounded-full flex items-center justify-center cursor-pointer hover:bg-whatsapp-600 transition-colors">
                   <Camera className="w-3 h-3 text-white" />
@@ -383,116 +188,28 @@ export const FamilyRegisterForm = () => {
                 </label>
               </div>
             </div>
-            <p className="text-xs text-gray-500">Photo de profil (optionnel)</p>
+            <p className="text-xs text-gray-500">Photo de profil <span className="text-red-500">*</span></p>
+            {methods.formState.errors.avatar_url && (
+              <p className="text-sm text-red-600 mt-1">{methods.formState.errors.avatar_url.message}</p>
+            )}
           </div>
 
-          {/* Civilité */}
+          {/* Nom à afficher */}
           <div>
-            <Label htmlFor="title">Civilité *</Label>
-            <Select
-              value={methods.watch('title')}
-              onValueChange={(value) => methods.setValue('title', value as 'M.' | 'Mme')}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Sélectionnez votre civilité" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="M.">M.</SelectItem>
-                <SelectItem value="Mme">Mme</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* ComboBox pour le rôle */}
-          <div>
-            <Label htmlFor="role">Rôle</Label>
-            <Select value={role} onValueChange={handleRoleChange}>
-              <SelectTrigger>
-                <SelectValue placeholder="Choisissez un rôle" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Membre">Membre</SelectItem>
-                <SelectItem value="Administrateur">Administrateur</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Modal pour le code admin */}
-          <Dialog open={showAdminModal} onOpenChange={setShowAdminModal}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Code Administrateur</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <Label htmlFor="admin-code">Veuillez entrer le code secret pour devenir administrateur :</Label>
-                <Input
-                  id="admin-code"
-                  type="password"
-                  value={adminCode}
-                  onChange={e => setAdminCode(e.target.value)}
-                  autoFocus
-                />
-                <div className="flex justify-end space-x-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setShowAdminModal(false);
-                      setRole('Membre');
-                      setAdminCode('');
-                    }}
-                  >
-                    Annuler
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={() => {
-                      if (adminCode === '1432') {
-                        setIsAdmin(true);
-                        setShowAdminModal(false);
-                      } else {
-                        setIsAdmin(false);
-                        alert('Code incorrect');
-                      }
-                    }}
-                  >
-                    Valider
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-
-          {/* Nom et Prénom */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="firstName">Prénom *</Label>
-              <Input
-                id="firstName"
-                {...methods.register('firstName')}
-                placeholder="Prénom"
-              />
-              {methods.formState.errors.firstName && (
-                <p className="text-sm text-red-600 mt-1">{methods.formState.errors.firstName.message}</p>
-              )}
-            </div>
-
-            <div>
-              <Label htmlFor="lastName">Nom *</Label>
-              <Input
-                id="lastName"
-                {...methods.register('lastName')}
-                placeholder="Nom de famille"
-              />
-              {methods.formState.errors.lastName && (
-                <p className="text-sm text-red-600 mt-1">{methods.formState.errors.lastName.message}</p>
-              )}
-            </div>
+            <Label htmlFor="display_name" className="font-semibold">Nom à afficher</Label>
+            <Input
+              id="display_name"
+              {...methods.register('display_name')}
+              placeholder="Nom à afficher"
+            />
+            {methods.formState.errors.display_name && (
+              <p className="text-sm text-red-600 mt-1">{methods.formState.errors.display_name.message}</p>
+            )}
           </div>
 
           {/* Email */}
           <div>
-            <Label htmlFor="email">Email *</Label>
+            <Label htmlFor="email" className="font-semibold">Email</Label>
             <Input
               id="email"
               type="email"
@@ -506,7 +223,7 @@ export const FamilyRegisterForm = () => {
 
           {/* Mot de passe */}
           <div>
-            <Label htmlFor="password">Mot de passe *</Label>
+            <Label htmlFor="password" className="font-semibold">Mot de passe</Label>
             <div className="relative">
               <Input
                 id="password"
@@ -517,7 +234,7 @@ export const FamilyRegisterForm = () => {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-whatsapp-600 bg-transparent p-1 rounded-full focus:outline-none focus:ring-2 focus:ring-whatsapp-500"
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -527,132 +244,124 @@ export const FamilyRegisterForm = () => {
             )}
           </div>
 
-          {/* Téléphone */}
-          <div className="grid grid-cols-3 gap-4">
-          <div>
-              <Label htmlFor="phoneCode">Indicatif</Label>
+          {/* Indicatif pays + téléphone */}
+          <div className="flex gap-2">
+            <div className="w-1/3">
+              <Label htmlFor="phone_code" className="font-semibold">Indicatif</Label>
               <Input
-                id="phoneCode"
-                {...methods.register('phoneCode')}
-                placeholder="+33"
+                id="phone_code"
+                {...methods.register('phone_code')}
+                placeholder="+225"
+                maxLength={5}
               />
             </div>
-            <div className="col-span-2">
-            <Label htmlFor="phone">Téléphone</Label>
-            <Input
-              id="phone"
-              {...methods.register('phone')}
-                placeholder="6 12 34 56 78"
-            />
+            <div className="flex-1">
+              <Label htmlFor="phone" className="font-semibold">Téléphone</Label>
+              <Input
+                id="phone"
+                {...methods.register('phone')}
+                placeholder="ex: 0700000000"
+              />
             </div>
           </div>
+          {methods.formState.errors.phone && (
+            <p className="text-sm text-red-600 mt-1">{methods.formState.errors.phone.message}</p>
+          )}
 
-          {/* Profession */}
+          {/* Civilité */}
           <div>
-            <Label htmlFor="profession">Profession/Activité</Label>
-            <Input
-              id="profession"
-              {...methods.register('profession')}
-              placeholder="ex: Médecin, Retraité, Étudiant..."
-            />
-          </div>
-
-          {/* Localisation actuelle */}
-          <div>
-            <Label htmlFor="currentLocation">Localisation actuelle</Label>
-            <Input
-              id="currentLocation"
-              {...methods.register('currentLocation')}
-              placeholder="ex: Paris, France"
-            />
-          </div>
-
-          {/* Lieu de naissance */}
-          <div>
-            <Label htmlFor="birthPlace">Lieu de naissance</Label>
-            <Input
-              id="birthPlace"
-              {...methods.register('birthPlace')}
-              placeholder="ex: Lyon, France"
-            />
-          </div>
-
-          {/* Affiliation */}
-          <div className="space-y-2">
-            <Label htmlFor="relationship">
-              Affiliation avec le Patriarche ou un autre membre *
-            </Label>
+            <Label htmlFor="civilite" className="font-semibold">Civilité</Label>
             <Select
-              value={methods.watch('relationship')}
-              onValueChange={(value) => {
-                methods.setValue('relationship', value as RelationshipType);
-              }}
+              value={methods.watch('civilite')}
+              onValueChange={(value) => methods.setValue('civilite', value as 'M.' | 'Mme')}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Sélectionnez votre relation" />
+                <SelectValue placeholder="Choisissez votre civilité" />
               </SelectTrigger>
               <SelectContent>
-                {relationshipTypeOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-                {!patriarchExists && <SelectItem value="patriarche">Patriarche</SelectItem>}
+                <SelectItem value="M.">M.</SelectItem>
+                <SelectItem value="Mme">Mme</SelectItem>
               </SelectContent>
             </Select>
-            {methods.formState.errors.relationship && (
-              <p className="text-sm text-red-600 mt-1">{methods.formState.errors.relationship.message}</p>
+            {methods.formState.errors.civilite && (
+              <p className="text-sm text-red-600 mt-1">{methods.formState.errors.civilite.message}</p>
             )}
           </div>
 
-          {/* Champs des parents et conjoint */}
-          <div className="space-y-4">
-            <Label>{methods.watch('title') === 'M.' ? "Fils de" : "Fille de"}</Label>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <ComboboxMembre
-                  name="fatherId"
-                  placeholder="Rechercher le père..."
-                />
-                {methods.formState.errors.fatherId && (
-                  <p className="text-sm text-red-600 mt-1">{methods.formState.errors.fatherId.message}</p>
-                )}
-              </div>
-              <div>
-                <ComboboxMembre
-                  name="motherId"
-                  placeholder="Rechercher la mère..."
-                />
-                 {methods.formState.errors.motherId && (
-                  <p className="text-sm text-red-600 mt-1">{methods.formState.errors.motherId.message}</p>
-                )}
-              </div>
-            </div>
+          {/* Sélecteur de rôle */}
+          <div>
+            <Label htmlFor="role" className="font-semibold">Rôle</Label>
+            <Select value={role} onValueChange={handleRoleChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Choisissez un rôle" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="user">Utilisateur</SelectItem>
+                <SelectItem value="admin">Administrateur</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label>{methods.watch('title') === 'M.' ? 'Épouse' : 'Époux'}</Label>
-            <ComboboxMembre
-              name="spouseId"
-              placeholder={methods.watch('title') === 'M.' ? "Rechercher l'épouse..." : "Rechercher l'époux..."}
-            />
-             {methods.formState.errors.spouseId && (
-                  <p className="text-sm text-red-600 mt-1">{methods.formState.errors.spouseId.message}</p>
-                )}
-          </div>
+          <Dialog open={isAdminDialogOpen} onOpenChange={open => {
+            if (!open) {
+              setIsAdminDialogOpen(false);
+              setRole('user');
+              setAdminCode('');
+              setRoleError('');
+            }
+          }}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Code Administrateur</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <Label htmlFor="admin-code" className="font-semibold">Veuillez entrer le code secret pour devenir administrateur :</Label>
+                <Input
+                  id="admin-code"
+                  type="password"
+                  value={adminCode}
+                  onChange={e => setAdminCode(e.target.value)}
+                  placeholder="Code admin"
+                  autoFocus
+                />
+                {roleError && <p className="text-sm text-red-600 mt-1">{roleError}</p>}
+                <div className="flex justify-end space-x-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setIsAdminDialogOpen(false);
+                      setRole('user');
+                      setAdminCode('');
+                      setRoleError('');
+                    }}
+                  >Annuler</Button>
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      if (adminCode === '1432') {
+                        setRole('admin');
+                        setIsAdminDialogOpen(false);
+                        setRoleError('');
+                      } else {
+                        setRoleError('Code administrateur incorrect');
+                      }
+                    }}
+                  >Valider</Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
 
           <Button
             type="submit"
-            className="w-full"
-            disabled={isLoading || !methods.watch('photoUrl')}
+            className="w-full bg-whatsapp-600 hover:bg-whatsapp-700 text-white rounded-md py-2 px-4 font-semibold transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-whatsapp-500 focus:ring-offset-2 disabled:opacity-60"
+            disabled={isLoading || (role === 'admin' && adminCode !== '1432')}
           >
             {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {role === 'Administrateur' ? 'Création en cours...' : 'Inscription en cours...'}
-              </>
+              <span className="mr-2">Inscription...</span>
             ) : (
-              'Créer mon profil familial'
+              <><UserPlus className="inline-block w-5 h-5 mr-2 align-middle" />Créer mon compte</>
             )}
           </Button>
         </form>

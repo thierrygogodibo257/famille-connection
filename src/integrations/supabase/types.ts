@@ -239,7 +239,7 @@ export type Database = {
             | null
           role: string | null
           situation: string | null
-          title: Database["public"]["Enums"]["family_title"] | null
+          civilite: Database["public"]["Enums"]["family_title"] | null
           updated_at: string
         }
         Insert: {
@@ -265,7 +265,7 @@ export type Database = {
             | null
           role?: string | null
           situation?: string | null
-          title?: Database["public"]["Enums"]["family_title"] | null
+          civilite?: Database["public"]["Enums"]["family_title"] | null
           updated_at?: string
         }
         Update: {
@@ -291,7 +291,7 @@ export type Database = {
             | null
           role?: string | null
           situation?: string | null
-          title?: Database["public"]["Enums"]["family_title"] | null
+          civilite?: Database["public"]["Enums"]["family_title"] | null
           updated_at?: string
         }
         Relationships: [

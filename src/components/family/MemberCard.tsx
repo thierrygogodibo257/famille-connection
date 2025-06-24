@@ -45,7 +45,7 @@ export const MemberCard = ({
             <h3 className="font-semibold text-gray-900 truncate">
               {member.first_name} {member.last_name}
             </h3>
-            <p className="text-sm text-whatsapp-600 truncate">{member.title}</p>
+            <p className="text-sm text-whatsapp-600 truncate">{member.civilite}</p>
           </div>
           {isAdmin && (
             <div onClick={(e) => e.stopPropagation()}>
@@ -95,7 +95,7 @@ export const MemberCard = ({
           <h3 className="text-xl font-bold text-gray-900">
             {member.first_name} {member.last_name}
           </h3>
-          <p className="text-whatsapp-600 font-medium">{member.title}</p>
+          <p className="text-whatsapp-600 font-medium">{member.civilite}</p>
 
           {member.situation && (
             <p className="text-sm text-gray-600 bg-gray-100 px-3 py-1 rounded-full">

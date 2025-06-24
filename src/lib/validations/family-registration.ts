@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { RelationshipType } from '@/types/family';
 
 export const familyRegisterSchema = z.object({
-  title: z.enum(['M.', 'Mme']),
+  civilite: z.enum(['M.', 'Mme']),
   firstName: z.string().min(1, "Le prénom est requis"),
   lastName: z.string().min(1, "Le nom est requis"),
   email: z.string().email("Email invalide"),
@@ -30,7 +30,7 @@ export const familyRegistrationSchema = z.object({
   birthDate: z.string().optional(),
   birthPlace: z.string().optional(),
   currentLocation: z.string().optional(),
-  title: z.string().min(1, "Le titre est requis"),
+  civilite: z.string().min(1, "La civilité est requise"),
   situation: z.string().optional(),
   profession: z.string().optional(),
   photoUrl: z.string().optional(),
@@ -49,7 +49,7 @@ export const updateProfileSchema = z.object({
   lastName: z.string().min(1, "Le nom est requis"),
   phone: z.string().optional(),
   country: z.string().optional(),
-  title: z.string().min(1, "Le titre est requis"),
+  civilite: z.string().min(1, "La civilité est requise"),
   birthDate: z.string().optional(),
   birthPlace: z.string().optional(),
   currentLocation: z.string().optional(),

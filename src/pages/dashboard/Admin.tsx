@@ -284,7 +284,7 @@ const Admin = () => {
                           {member.first_name} {member.last_name}
                         </div>
                         <div className="text-sm text-gray-500">
-                          {member.title || 'Membre'}
+                          {member.civilite || 'Membre'}
                         </div>
                       </div>
                     </div>

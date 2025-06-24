@@ -11,48 +11,76 @@ export const api = {
       if (userError) throw new Error('Erreur d\'authentification');
       if (!user) throw new Error('Non authentifié');
 
-      // D'abord essayer de récupérer le profil existant
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
+      // Approche alternative : essayer d'abord de récupérer le profil avec une requête simple
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
 
-      if (error && error.code === 'PGRST116') {
-        // Profil non trouvé, le créer à partir des métadonnées utilisateur
-        console.log('Profil non trouvé, création à partir des métadonnées...');
+        if (error && error.code === 'PGRST116') {
+          // Profil non trouvé, le créer à partir des métadonnées utilisateur
+          console.log('Profil non trouvé, création à partir des métadonnées...');
+          return await api.profiles.createFromUserMetadata(user);
+        }
+
+        if (error) {
+          console.error('Erreur lors de la récupération du profil:', error);
+          // Si c'est une erreur de politique RLS, essayer une approche alternative
+          if (error.code === '42P17' || error.message.includes('infinite recursion')) {
+            console.log('Erreur RLS détectée, utilisation de l\'approche alternative...');
+            return await api.profiles.createFromUserMetadata(user);
+          }
+          throw new Error(error.message);
+        }
+        if (!data) throw new Error('Profil non trouvé');
+
+        return data;
+      } catch (error: any) {
+        console.error('Erreur dans getCurrent, fallback vers createFromUserMetadata:', error);
+        // En cas d'erreur, essayer de créer le profil à partir des métadonnées
         return await api.profiles.createFromUserMetadata(user);
       }
-
-      if (error) {
-        console.error('Erreur lors de la récupération du profil:', error);
-        throw new Error(error.message);
-      }
-      if (!data) throw new Error('Profil non trouvé');
-
-      return data;
     },
 
-    createFromUserMetadata: async (user: any): Promise<Profile> => {
-      const metadata = user.user_metadata;
+    createFromUserMetadata: async (user: any): Promise<any> => {
+      const metadata = user.user_metadata || {};
 
-      const profileData = {
-        id: user.id,
-        email: user.email,
-        first_name: metadata.first_name || '',
+      // Générer un UUID pour l'id
+      const generateUUID = () => {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+          const r = Math.random() * 16 | 0;
+          const v = c === 'x' ? r : (r & 0x3 | 0x8);
+          return v.toString(16);
+        });
+      };
+
+      const profileData: any = {
+        id: generateUUID(), // Générer un UUID manuellement
+        user_id: user.id, // Utiliser user_id au lieu d'id
+        email: user.email || '',
+        first_name: metadata.first_name || metadata.display_name || '',
         last_name: metadata.last_name || '',
         phone: metadata.phone || '',
-        title: metadata.title || 'Membre',
-        photo_url: metadata.photo_url || '',
-        birth_date: metadata.birth_date || null,
+        profession: metadata.profession || '',
         birth_place: metadata.birth_place || '',
+        avatar_url: metadata.avatar_url || '',
+        photo_url: metadata.photo_url || '',
+        relationship_type: metadata.relationship_type || null,
+        father_name: metadata.father_name || '',
+        mother_name: metadata.mother_name || '',
+        birth_date: metadata.birth_date || null,
+        civilite: metadata.civilite || 'M.',
         current_location: metadata.current_location || '',
         situation: metadata.situation || '',
         is_patriarch: metadata.is_patriarch || false,
         is_admin: metadata.is_admin || false,
-        created_at: metadata.created_at || new Date().toISOString(),
+        created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
+
+      console.log('Tentative d\'insertion du profil:', profileData);
 
       const { data, error } = await supabase
         .from('profiles')
@@ -103,34 +131,66 @@ export const api = {
       console.log('Utilisateur authentifié:', user.id);
 
       // Essayer de récupérer tous les profils
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Erreur lors de la récupération des profils:', error);
-        // Si l'erreur est liée aux permissions, essayer de récupérer seulement le profil de l'utilisateur connecté
-        if (error.code === 'PGRST116' || error.message.includes('permission')) {
-          console.log('Tentative de récupération du profil utilisateur uniquement...');
-          const { data: userProfile, error: userProfileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', user.id)
-            .single();
+        if (error) {
+          console.error('Erreur lors de la récupération des profils:', error);
 
-          if (userProfileError) {
-            console.error('Erreur lors de la récupération du profil utilisateur:', userProfileError);
-            throw new Error('Impossible de récupérer les profils');
+          // Si c'est une erreur de politique RLS, essayer de récupérer seulement le profil de l'utilisateur connecté
+          if (error.code === '42P17' || error.message.includes('infinite recursion')) {
+            console.log('Erreur RLS détectée, récupération du profil utilisateur uniquement...');
+            const { data: userProfile, error: userProfileError } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('user_id', user.id)
+              .single();
+
+            if (userProfileError) {
+              console.error('Erreur lors de la récupération du profil utilisateur:', userProfileError);
+              // Si même ça ne marche pas, créer le profil à partir des métadonnées
+              const profile = await api.profiles.createFromUserMetadata(user);
+              return [profile];
+            }
+
+            return userProfile ? [userProfile] : [];
           }
 
-          return userProfile ? [userProfile] : [];
-        }
-        throw new Error(error.message);
-      }
+          // Si l'erreur est liée aux permissions, essayer de récupérer seulement le profil de l'utilisateur connecté
+          if (error.code === 'PGRST116' || error.message.includes('permission')) {
+            console.log('Tentative de récupération du profil utilisateur uniquement...');
+            const { data: userProfile, error: userProfileError } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('user_id', user.id)
+              .single();
 
-      console.log('Profils récupérés:', data?.length || 0);
-      return data || [];
+            if (userProfileError) {
+              console.error('Erreur lors de la récupération du profil utilisateur:', userProfileError);
+              throw new Error('Impossible de récupérer les profils');
+            }
+
+            return userProfile ? [userProfile] : [];
+          }
+          throw new Error(error.message);
+        }
+
+        console.log('Profils récupérés:', data?.length || 0);
+        return data || [];
+      } catch (error: any) {
+        console.error('Erreur dans getAll, fallback vers profil utilisateur:', error);
+        // En cas d'erreur, essayer de récupérer au moins le profil de l'utilisateur connecté
+        try {
+          const profile = await api.profiles.getCurrent();
+          return [profile];
+        } catch (fallbackError) {
+          console.error('Erreur lors du fallback:', fallbackError);
+          throw new Error('Impossible de récupérer les profils');
+        }
+      }
     },
 
     getById: async (id: string): Promise<Profile> => {
@@ -178,7 +238,7 @@ export const api = {
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', user.id)
+        .eq('user_id', user.id)
         .single();
 
       if (profileError && profileError.code === 'PGRST116') {
@@ -255,7 +315,7 @@ export const api = {
           console.error('Erreur lors de la récupération de tous les profils:', profilesError);
           // Si on ne peut pas récupérer tous les profils, on utilise seulement le profil actuel
           const totalMembers = 1;
-          const generations = currentProfile.title ? 1 : 0;
+          const generations = currentProfile.civilite ? 1 : 0;
           const activeBranches = currentProfile.is_patriarch ? 1 : 0;
 
           return {
@@ -272,14 +332,14 @@ export const api = {
         // Calculer les générations (basé sur les titres)
         const generations = new Set();
         profiles?.forEach(profile => {
-          if (profile.title) {
-            if (profile.title.includes('Patriarche') || profile.title.includes('Matriarche')) {
+          if (profile.civilite) {
+            if (profile.civilite.includes('Patriarche') || profile.civilite.includes('Matriarche')) {
               generations.add('1');
-            } else if (profile.title.includes('Père') || profile.title.includes('Mère')) {
+            } else if (profile.civilite.includes('Père') || profile.civilite.includes('Mère')) {
               generations.add('2');
-            } else if (profile.title.includes('Fils') || profile.title.includes('Fille')) {
+            } else if (profile.civilite.includes('Fils') || profile.civilite.includes('Fille')) {
               generations.add('3');
-            } else if (profile.title.includes('Petit-fils') || profile.title.includes('Petite-fille')) {
+            } else if (profile.civilite.includes('Petit-fils') || profile.civilite.includes('Petite-fille')) {
               generations.add('4');
             }
           }
@@ -543,7 +603,7 @@ export const api = {
           p_mother_id: profile.mother_id,
           p_is_admin: profile.is_admin,
           p_birth_date: profile.birth_date,
-          p_title: profile.title,
+          p_civilite: profile.civilite,
           p_situation: profile.situation,
           p_is_patriarch: profile.is_patriarch
         });

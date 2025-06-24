@@ -27,7 +27,7 @@ export const EditUserDialog: React.FC<EditUserDialogProps> = ({
     first_name: '',
     last_name: '',
     email: '',
-    title: '',
+    civilite: '',
     current_location: '',
     birth_place: '',
     situation: '',
@@ -41,7 +41,7 @@ export const EditUserDialog: React.FC<EditUserDialogProps> = ({
         first_name: user.first_name || '',
         last_name: user.last_name || '',
         email: user.email || '',
-        title: user.title || '',
+        civilite: user.civilite || '',
         current_location: user.current_location || '',
         birth_place: user.birth_place || '',
         situation: user.situation || '',
@@ -60,7 +60,7 @@ export const EditUserDialog: React.FC<EditUserDialogProps> = ({
         first_name: formData.first_name,
         last_name: formData.last_name,
         email: formData.email,
-        title: formData.title as any,
+        civilite: formData.civilite as any,
         current_location: formData.current_location,
         birth_place: formData.birth_place,
         situation: formData.situation,
@@ -126,7 +126,7 @@ export const EditUserDialog: React.FC<EditUserDialogProps> = ({
           <div>
             <Label htmlFor="title">Titre</Label>
             <Select
-              value={formData.title}
+              value={formData.civilite}
               onValueChange={(value) => setFormData(prev => ({ ...prev, title: value }))}
             >
               <SelectTrigger>
